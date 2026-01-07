@@ -93,20 +93,39 @@ export default function UploadVideoPage() {
     )
   }
 
-  const uploadFile = async (
+  /**
+   * 1. Get Presigned URL from API
+   * 2. Upload directly to R2 using PUT
+   */
+  const uploadFileConnectR2 = async (
     file: File,
     type: "video" | "thumbnail",
     onProgress: (progress: number) => void,
-  ) => {
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("type", type)
+  ): Promise<{ url: string; key: string; size: number; type: string }> => {
+    // 1. Get Presigned URL
+    const initRes = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        type,
+      }),
+    })
 
-    return await new Promise<{ url: string; size: number; type: string }>((resolve, reject) => {
+    if (!initRes.ok) {
+      const error = await initRes.json()
+      throw new Error(error.error || "Failed to get upload URL")
+    }
+
+    const { uploadUrl, key } = await initRes.json()
+
+    // 2. Upload to R2 (Directly)
+    return await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
-      xhr.open("POST", "/api/upload")
-      xhr.responseType = "json"
-      xhr.withCredentials = true
+      xhr.open("PUT", uploadUrl)
+      xhr.setRequestHeader("Content-Type", file.type)
 
       xhr.upload.onprogress = (event) => {
         if (!event.lengthComputable) return
@@ -115,26 +134,48 @@ export default function UploadVideoPage() {
       }
 
       xhr.onload = () => {
-        const status = xhr.status
-        const response =
-          xhr.response ??
-          (() => {
-            try {
-              return xhr.responseText ? JSON.parse(xhr.responseText) : null
-            } catch {
-              return null
-            }
-          })()
-
-        if (status >= 200 && status < 300) {
-          resolve(response as { url: string; size: number; type: string })
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Construct the public URL correctly
+          // We know the key, and we can construct the URL based on R2 public domain
+          // BUT, for now our API returns the full 'uploadUrl' which is signed.
+          // We need the PUBLIC url to save to DB.
+          // The API didn't return the public URL, only key.
+          // Let's assume standard R2 public domain structure or ask API to return it?
+          // Actually, our API /upload returns `key`.
+          // We can construct the URL if we know the domain. 
+          // However, for simplicity, let's update strict `videoUrl` construction.
+          // In this specific app, `key` is enough if we have a robust URL builder, 
+          // but our DB saves full URL.
+          // Let's updated `uploadToR2` in previous step? No, we used signed url.
+          // We need the PUBLIC_DOMAIN.
+          // Quick fix: We will rely on the `key` and constructing it, 
+          // OR better: Assume the `uploadUrl` is NOT the public URL.
+          // We need to construct: `https://<R2_PUBLIC_DOMAIN>/<key>`
+          // Since we are client side, we might not know R2_PUBLIC_DOMAIN easily.
+          // Let's use a relative path or ask the User to Config it?
+          // No, better approach: The API should return the `publicUrl` as well.
+          // I will update the API to return `publicUrl` in the next step if needed.
+          // For now, let's assume we pass the `key` to the `create video` API 
+          // and let the backend construct the final URL. This is safer.
+          // Wait, `app/api/videos/route.ts` expects `videoUrl` string.
+          // Let's modify `app/api/videos/route.ts` OR just assume a domain.
+          // Actually, the previous implementation returned `url` (public).
+          // Let's modify the frontend to send `key` instead of `url` and let backend handle it?
+          // No, to minimize changes, let's just make the API return `publicUrl`.
+          // I'll update the API first then come back here.
+          // Wait, I can't interrupt this tool call sequence easily to go back.
+          // I will Implement this function to return `key`, and then
+          // in `handleSubmit`, I will send `key` to the backend.
+          // And I will Update `app/api/videos/route.ts` to accept `videoKey` OR `videoUrl`.
+          // That seems robust.
+          resolve({ url: key, key, size: file.size, type: file.type })
         } else {
-          reject(new Error(response?.error || "Upload failed"))
+          reject(new Error("Upload to R2 failed"))
         }
       }
 
-      xhr.onerror = () => reject(new Error("Upload failed"))
-      xhr.send(formData)
+      xhr.onerror = () => reject(new Error("Network error during upload"))
+      xhr.send(file)
     })
   }
 
@@ -158,19 +199,34 @@ export default function UploadVideoPage() {
     }
 
     setLoading(true)
-    setUploadStatus("Uploading video...")
+    setUploadStatus("Starting upload...")
     setUploadProgress(0)
 
     try {
-      const videoUpload = await uploadFile(videoFile!, "video", setUploadProgress)
-      let thumbnailUrl: string | undefined
+      // 1. Upload Video
+      setUploadStatus("Uploading video directly to R2...")
+      // We'll use the returned 'url' as the 'key' for now, and handle logic below
+      const videoUpload = await uploadFileConnectR2(videoFile!, "video", setUploadProgress)
 
+      let thumbnailKey: string | undefined
+
+      // 2. Upload Thumbnail (Optional)
       if (thumbnailFile) {
         setUploadStatus("Uploading thumbnail...")
         setUploadProgress(0)
-        const thumbnailUpload = await uploadFile(thumbnailFile, "thumbnail", setUploadProgress)
-        thumbnailUrl = thumbnailUpload.url
+        const thumbnailUpload = await uploadFileConnectR2(thumbnailFile, "thumbnail", setUploadProgress)
+        thumbnailKey = thumbnailUpload.key
       }
+
+      // 3. Save to Database
+      // Note: We are sending 'key' instead of full URL. 
+      // The backend /api/videos needs to be smart enough or we update it.
+      // Let's verify /api/videos/route.ts behavior.
+      // If it blindly saves the string, then `videoUrl` will be just the path.
+      // e.g., "videos/123-abc.mp4".
+      // Then `video-player.tsx` needs to know the domain.
+      // OR we update /api/videos to prepend the domain.
+      // Let's assume we will update /api/videos to handle this.
 
       setUploadStatus("Saving video details...")
       const response = await fetch("/api/videos", {
@@ -183,8 +239,9 @@ export default function UploadVideoPage() {
           categoryId: categoryId === "none" ? undefined : categoryId,
           visibility,
           allowedDomainIds: visibility === "DOMAIN_RESTRICTED" ? allowedDomainIds : undefined,
-          videoUrl: videoUpload.url,
-          thumbnailUrl,
+          videoKey: videoUpload.key, // New field, or reuse videoUrl? reusing videoUrl is cleaner if we fix it in backend
+          videoUrl: videoUpload.key, // Passing Key as URL for now, Backend MUST fix this.
+          thumbnailUrl: thumbnailKey,
           fileSize: videoUpload.size,
           mimeType: videoUpload.type,
         }),
@@ -199,6 +256,7 @@ export default function UploadVideoPage() {
       router.push(`/videos/${result.video.id}`)
       router.refresh()
     } catch (error) {
+      console.error(error)
       const message = error instanceof Error ? error.message : "Upload failed"
       toast.error(message)
     } finally {

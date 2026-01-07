@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
       data: {
         title: validatedData.title,
         description: validatedData.description,
-        videoUrl: body.videoUrl, // From upload endpoint
-        thumbnailUrl: body.thumbnailUrl,
+        videoUrl: body.videoKey ? `${process.env.R2_PUBLIC_DOMAIN}/${body.videoKey}` : body.videoUrl, // Prefer constructing from key if available
+        thumbnailUrl: body.thumbnailUrl ? (body.thumbnailUrl.startsWith('http') ? body.thumbnailUrl : `${process.env.R2_PUBLIC_DOMAIN}/${body.thumbnailUrl}`) : null,
         duration: body.duration,
         fileSize: body.fileSize,
         mimeType: body.mimeType,

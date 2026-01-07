@@ -86,6 +86,20 @@ export async function deleteFromR2(key: string): Promise<void> {
 }
 
 /**
+ * Generate signed URL for direct upload (PUT)
+ */
+export async function getSignedUploadUrl(key: string, contentType: string, expiresIn = 3600): Promise<string> {
+  const config = getR2Config()
+  const command = new PutObjectCommand({
+    Bucket: config.bucketName,
+    Key: key,
+    ContentType: contentType,
+  })
+
+  return await getSignedUrl(getR2Client(config), command, { expiresIn })
+}
+
+/**
  * Generate signed URL for private videos
  */
 export async function getSignedR2Url(key: string, expiresIn = 3600): Promise<string> {

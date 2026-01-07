@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getUserFromRequest } from "@/lib/auth"
-import { uploadToR2, generateUniqueFilename } from "@/lib/r2"
+import { getSignedUploadUrl, generateUniqueFilename } from "@/lib/r2"
 
-const MAX_FILE_SIZE = 5000 * 1024 * 1024 // 500MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB (R2 single PUT limit)
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"]
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
@@ -19,53 +19,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const formData = await request.formData()
-    const file = formData.get("file") as File
-    const type = formData.get("type") as string // 'video' or 'thumbnail'
+    const body = await request.json()
+    const { filename, fileType, fileSize, type } = body
 
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 })
+    if (!filename || !fileType || !fileSize || !type) {
+      return NextResponse.json({ error: "Missing file metadata" }, { status: 400 })
     }
 
     // Validate file type
     const allowedTypes = type === "thumbnail" ? ALLOWED_IMAGE_TYPES : ALLOWED_VIDEO_TYPES
-    if (!allowedTypes.includes(file.type)) {
+    if (!allowedTypes.includes(fileType)) {
       return NextResponse.json(
-        { error: `Invalid file type. Allowed types: ${allowedTypes.join(", ")}` },
+        { error: `Invalid file type. Allowed: ${allowedTypes.join(", ")}` },
         { status: 400 },
       )
     }
 
     // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
+    if (fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: `File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB` },
+        { error: `File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024 / 1024}GB` },
         { status: 400 },
       )
     }
 
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    // Generate unique filename/key
+    const startFilename = generateUniqueFilename(filename)
+    const key = type === "thumbnail" ? `thumbnails/${startFilename.split('/').pop()}` : startFilename // Adjust path if needed, usually generateUniqueFilename handles basic structure but let's keep it simple
 
-    // Generate unique filename
-    const filename = generateUniqueFilename(file.name)
-
-    // Upload to R2
-    const url = await uploadToR2(buffer, filename, file.type)
+    // Generate Presigned URL
+    const uploadUrl = await getSignedUploadUrl(key, fileType)
 
     return NextResponse.json(
       {
-        message: "File uploaded successfully",
-        url,
-        filename,
-        size: file.size,
-        type: file.type,
+        uploadUrl,
+        key, // key is effectively the path in the bucket
       },
       { status: 200 },
     )
   } catch (error) {
-    console.error("Upload error:", error)
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 })
+    console.error("Presigned URL error:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
