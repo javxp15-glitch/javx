@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, UploadCloud } from "lucide-react"
+import { ArrowLeft, UploadCloud, Film, ImagePlus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -251,160 +251,193 @@ export default function UploadVideoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <Button variant="ghost" asChild className="mb-4">
+    <div className="min-h-screen bg-background relative">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="container mx-auto px-4 py-24 relative z-10">
+        <Button variant="ghost" asChild className="mb-6 text-muted-foreground hover:text-white">
           <Link href="/videos">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Videos
+            กลับไปหน้าวิดีโอ
           </Link>
         </Button>
 
         <div className="grid gap-8 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-2xl">เพิ่มวิดีโอ</CardTitle>
-              <CardDescription>กรอกข้อมูลเกี่ยวกับวิดีโอ ไลฟ์วิดีโอและรูปหน้าปก.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="lg:col-span-2 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70 flex items-center gap-2">
+                <UploadCloud className="h-6 w-6 text-primary" />
+                เพิ่มวิดีโอ
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1">กรอกข้อมูลเกี่ยวกับวิดีโอ ไลฟ์วิดีโอและรูปหน้าปก</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-gray-300">ชื่อคลิป</Label>
+                <Input
+                  id="title"
+                  placeholder="กรอกชื่อวิดีโอคลิป"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  className="bg-white/5 border-white/10 focus:border-primary/50"
+                />
+                {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-gray-300">รายละเอียด</Label>
+                <Textarea
+                  id="description"
+                  placeholder="เพิ่มคำอธิบายสั้น ๆ สำหรับผู้ชม"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  className="bg-white/5 border-white/10 focus:border-primary/50"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="title">ชื่อคลิป</Label>
-                  <Input
-                    id="title"
-                    placeholder="กรอกชื่อวิดีโอคลิป"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                  />
-                  {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
+                  <Label className="text-gray-300">หมวดหมู่</Label>
+                  <MultiCategorySelector value={categoryIds} onValueChange={setCategoryIds} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">รายละเอียด</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="เพิ่มคำอธิบายสั้น ๆ สำหรับผู้ชม"
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                  />
+                  <Label className="text-gray-300">เผยแพร่</Label>
+                  <Select value={visibility} onValueChange={(value) => setVisibility(value as Visibility)}>
+                    <SelectTrigger className="bg-white/5 border-white/10">
+                      <SelectValue placeholder="การเผยแพร่" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PUBLIC">เผยแพร่</SelectItem>
+                      <SelectItem value="PRIVATE">ส่วนตัว</SelectItem>
+                      <SelectItem value="DOMAIN_RESTRICTED">เจาะจง Domain</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>หมวดหมู่</Label>
-                    <MultiCategorySelector value={categoryIds} onValueChange={setCategoryIds} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>เผยแพร่</Label>
-                    <Select value={visibility} onValueChange={(value) => setVisibility(value as Visibility)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="การเผยแพร่" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PUBLIC">เผยแพร่</SelectItem>
-                        <SelectItem value="PRIVATE">ส่วนตัว</SelectItem>
-                        <SelectItem value="DOMAIN_RESTRICTED">เจาะจง Domain</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {visibility === "DOMAIN_RESTRICTED" && (
-                  <div className="space-y-2">
-                    <Label>Domains ที่อนุญาต</Label>
-                    {activeDomains.length === 0 ? (
-                      <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                        ไม่มี Domains ที่ใช้งานอยู่ เพิ่ม Domains ใน{" "}
-                        <Link href="/settings/domains" className="text-primary underline">
-                          การตั้งค่าโดเมน
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {activeDomains.map((domain) => (
-                          <label
-                            key={domain.id}
-                            className="flex items-center gap-2 rounded-md border p-3 text-sm"
-                          >
-                            <Checkbox
-                              checked={allowedDomainIds.includes(domain.id)}
-                              onCheckedChange={() => toggleDomain(domain.id)}
-                            />
-                            <span>{domain.domain}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                    {errors.allowedDomainIds && <p className="text-sm text-destructive">{errors.allowedDomainIds}</p>}
-                  </div>
-                )}
-
+              {visibility === "DOMAIN_RESTRICTED" && (
                 <div className="space-y-2">
-                  <Label htmlFor="video-file">ไฟล์วิดีโอ</Label>
-                  <Input
+                  <Label>Domains ที่อนุญาต</Label>
+                  {activeDomains.length === 0 ? (
+                    <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                      ไม่มี Domains ที่ใช้งานอยู่ เพิ่ม Domains ใน{" "}
+                      <Link href="/settings/domains" className="text-primary underline">
+                        การตั้งค่าโดเมน
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {activeDomains.map((domain) => (
+                        <label
+                          key={domain.id}
+                          className="flex items-center gap-2 rounded-md border p-3 text-sm"
+                        >
+                          <Checkbox
+                            checked={allowedDomainIds.includes(domain.id)}
+                            onCheckedChange={() => toggleDomain(domain.id)}
+                          />
+                          <span>{domain.domain}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {errors.allowedDomainIds && <p className="text-sm text-destructive">{errors.allowedDomainIds}</p>}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label className="text-gray-300">ไฟล์วิดีโอ</Label>
+                <label
+                  htmlFor="video-file"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/20 rounded-xl cursor-pointer bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-all"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Film className="w-8 h-8 mb-2 text-primary" />
+                    <p className="mb-1 text-sm text-white font-medium">
+                      {videoFile ? videoFile.name : "คลิกเพื่อเลือกไฟล์วิดีโอ"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">MP4, WebM, MOV, AVI (สูงสุด 5GB)</p>
+                  </div>
+                  <input
                     id="video-file"
                     type="file"
+                    className="hidden"
                     accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
                     onChange={(event) => setVideoFile(event.target.files?.[0] ?? null)}
                   />
-                  {videoFile && <p className="text-sm text-muted-foreground">{videoFile.name}</p>}
-                  {errors.videoFile && <p className="text-sm text-destructive">{errors.videoFile}</p>}
-                </div>
+                </label>
+                {errors.videoFile && <p className="text-sm text-destructive">{errors.videoFile}</p>}
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="thumbnail-file">รูปหน้าปก (optional)</Label>
-                  <Input
+              <div className="space-y-2">
+                <Label className="text-gray-300">รูปหน้าปก (ไม่บังคับ)</Label>
+                <label
+                  htmlFor="thumbnail-file"
+                  className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-white/20 rounded-xl cursor-pointer bg-white/5 hover:bg-white/10 hover:border-primary/50 transition-all"
+                >
+                  <div className="flex flex-col items-center justify-center">
+                    <ImagePlus className="w-6 h-6 mb-1 text-accent" />
+                    <p className="text-sm text-white font-medium">
+                      {thumbnailFile ? thumbnailFile.name : "เลือกรูปหน้าปก"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">JPG, PNG, WebP</p>
+                  </div>
+                  <input
                     id="thumbnail-file"
                     type="file"
+                    className="hidden"
                     accept="image/jpeg,image/png,image/webp"
                     onChange={(event) => setThumbnailFile(event.target.files?.[0] ?? null)}
                   />
-                  {thumbnailFile && <p className="text-sm text-muted-foreground">{thumbnailFile.name}</p>}
-                </div>
+                </label>
+              </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button type="submit" disabled={loading}>
-                    <UploadCloud className="h-4 w-4 mr-2" />
-                    {loading ? "Uploading..." : "Upload Video"}
-                  </Button>
-                  {uploadStatus && <span className="text-sm text-muted-foreground">{uploadStatus}</span>}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                >
+                  <UploadCloud className="h-4 w-4 mr-2" />
+                  {loading ? "กำลังอัปโหลด..." : "อัปโหลดวิดีโอ"}
+                </Button>
+                {uploadStatus && <span className="text-sm text-muted-foreground">{uploadStatus}</span>}
+              </div>
+              {loading && uploadStatus.includes("Uploading") && (
+                <div className="space-y-2">
+                  <Progress value={uploadProgress} className="bg-white/10" />
+                  <p className="text-xs text-muted-foreground">{uploadProgress}%</p>
                 </div>
-                {loading && uploadStatus.includes("Uploading") && (
-                  <div className="space-y-2">
-                    <Progress value={uploadProgress} />
-                    <p className="text-xs text-muted-foreground">{uploadProgress}%</p>
-                  </div>
-                )}
-              </form>
-            </CardContent>
-          </Card>
+              )}
+            </form>
+          </div>
 
           <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>ข้อแนะนำในการอัปโหลด</CardTitle>
-                <CardDescription>รายละเอียดการอัปโหลดไฟล์วิดีโอและรูปภาพหน้าปกคลิป</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>ขนาดไฟล์สูงสุด : 5GB</p>
-                <p>รองรับไฟล์ : MP4, WebM, MOV, AVI</p>
-                <p>ชนิดรูปหน้าปก : JPG, PNG, WebP</p>
-              </CardContent>
-            </Card>
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">ข้อแนะนำในการอัปโหลด</h3>
+              <p className="text-muted-foreground text-sm mb-3">รายละเอียดการอัปโหลดไฟล์วิดีโอ</p>
+              <div className="space-y-2 text-sm text-gray-400">
+                <p>• ขนาดไฟล์สูงสุด : 5GB</p>
+                <p>• รองรับไฟล์ : MP4, WebM, MOV, AVI</p>
+                <p>• ชนิดรูปหน้าปก : JPG, PNG, WebP</p>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>การมองเห็น</CardTitle>
-                <CardDescription>ควบคุมผู้ที่สามารถเข้าถึงวิดีโอได้</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  วิดีโอสาธารณะจะปรากฏให้ทุกคนเห็น วิดีโอส่วนตัวจะมองเห็นได้เฉพาะคุณและผู้ดูแลระบบ.
-                </p>
-                <p>วิดีโอที่จำกัดโดเมนสามารถฝังได้เฉพาะบนโดเมนที่อนุมัติเท่านั้น</p>
-              </CardContent>
-            </Card>
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">การมองเห็น</h3>
+              <p className="text-muted-foreground text-sm mb-3">ควบคุมผู้ที่สามารถเข้าถึงวิดีโอได้</p>
+              <div className="space-y-2 text-sm text-gray-400">
+                <p>• วิดีโอสาธารณะจะปรากฏให้ทุกคนเห็น</p>
+                <p>• วิดีโอส่วนตัวจะมองเห็นได้เฉพาะคุณและผู้ดูแลระบบ</p>
+                <p>• วิดีโอที่จำกัดโดเมนสามารถฝังได้เฉพาะบนโดเมนที่อนุมัติ</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

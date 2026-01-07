@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Lock, Settings } from "lucide-react"
+import { User, Lock, Settings, UserCircle } from "lucide-react"
 import { toast } from "sonner"
 
 interface UserProfile {
@@ -65,35 +64,41 @@ function ProfileTab() {
     }
 
     if (!profile) {
-        return <div className="text-muted-foreground">กำลังโหลด...</div>
+        return <div className="text-muted-foreground text-center py-8">กำลังโหลด...</div>
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-                <Label htmlFor="name">ชื่อ</Label>
+                <Label htmlFor="name" className="text-gray-300">ชื่อ</Label>
                 <Input
                     id="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="ชื่อของคุณ"
+                    className="bg-white/5 border-white/10 focus:border-primary/50"
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="email">อีเมล</Label>
+                <Label htmlFor="email" className="text-gray-300">อีเมล</Label>
                 <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="อีเมลของคุณ"
+                    className="bg-white/5 border-white/10 focus:border-primary/50"
                 />
             </div>
             <div className="space-y-2">
-                <Label>สิทธิ์</Label>
-                <Input value={profile.role} disabled className="bg-muted" />
+                <Label className="text-gray-300">สิทธิ์</Label>
+                <Input value={profile.role} disabled className="bg-white/5 border-white/10 text-muted-foreground" />
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button
+                type="submit"
+                disabled={loading}
+                className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+            >
                 {loading ? "กำลังบันทึก..." : "บันทึก"}
             </Button>
         </form>
@@ -139,19 +144,20 @@ function SecurityTab() {
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-                <Label htmlFor="currentPassword">รหัสผ่านปัจจุบัน</Label>
+                <Label htmlFor="currentPassword" className="text-gray-300">รหัสผ่านปัจจุบัน</Label>
                 <Input
                     id="currentPassword"
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     required
+                    className="bg-white/5 border-white/10 focus:border-primary/50"
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="newPassword">รหัสผ่านใหม่</Label>
+                <Label htmlFor="newPassword" className="text-gray-300">รหัสผ่านใหม่</Label>
                 <Input
                     id="newPassword"
                     type="password"
@@ -159,19 +165,25 @@ function SecurityTab() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     minLength={6}
+                    className="bg-white/5 border-white/10 focus:border-primary/50"
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="confirmPassword">ยืนยันรหัสผ่านใหม่</Label>
+                <Label htmlFor="confirmPassword" className="text-gray-300">ยืนยันรหัสผ่านใหม่</Label>
                 <Input
                     id="confirmPassword"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    className="bg-white/5 border-white/10 focus:border-primary/50"
                 />
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button
+                type="submit"
+                disabled={loading}
+                className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
+            >
                 {loading ? "กำลังเปลี่ยน..." : "เปลี่ยนรหัสผ่าน"}
             </Button>
         </form>
@@ -180,50 +192,72 @@ function SecurityTab() {
 
 export default function SettingsPage() {
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold flex items-center gap-3">
-                        <Settings className="h-8 w-8" />
-                        การตั้งค่า
-                    </h1>
-                    <p className="text-muted-foreground mt-2">จัดการโปรไฟล์และความปลอดภัย</p>
+        <div className="min-h-screen bg-background relative">
+            {/* Background decorations */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
+            </div>
+
+            <div className="container mx-auto px-4 py-24 relative z-10">
+                {/* Header */}
+                <div className="mb-10">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/20">
+                            <UserCircle className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+                                การตั้งค่า
+                            </h1>
+                            <p className="text-muted-foreground">จัดการโปรไฟล์และความปลอดภัย</p>
+                        </div>
+                    </div>
                 </div>
 
-                <Tabs defaultValue="profile" className="space-y-6">
-                    <TabsList className="grid w-full max-w-md grid-cols-2">
-                        <TabsTrigger value="profile" className="flex items-center gap-2">
+                {/* Tabs */}
+                <Tabs defaultValue="profile" className="space-y-8">
+                    <TabsList className="bg-white/5 border border-white/10 p-1 rounded-xl">
+                        <TabsTrigger
+                            value="profile"
+                            className="flex items-center gap-2 data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg px-6 py-2.5"
+                        >
                             <User className="h-4 w-4" />
                             โปรไฟล์
                         </TabsTrigger>
-                        <TabsTrigger value="security" className="flex items-center gap-2">
+                        <TabsTrigger
+                            value="security"
+                            className="flex items-center gap-2 data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg px-6 py-2.5"
+                        >
                             <Lock className="h-4 w-4" />
                             ความปลอดภัย
                         </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="profile">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>ข้อมูลส่วนตัว</CardTitle>
-                                <CardDescription>แก้ไขชื่อและอีเมลของคุณ</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ProfileTab />
-                            </CardContent>
-                        </Card>
+                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 max-w-xl">
+                            <div className="mb-6">
+                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                                    <User className="h-5 w-5 text-primary" />
+                                    ข้อมูลส่วนตัว
+                                </h2>
+                                <p className="text-muted-foreground text-sm mt-1">แก้ไขชื่อและอีเมลของคุณ</p>
+                            </div>
+                            <ProfileTab />
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="security">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>เปลี่ยนรหัสผ่าน</CardTitle>
-                                <CardDescription>อัพเดทรหัสผ่านของคุณ</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <SecurityTab />
-                            </CardContent>
-                        </Card>
+                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 max-w-xl">
+                            <div className="mb-6">
+                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                                    <Lock className="h-5 w-5 text-primary" />
+                                    เปลี่ยนรหัสผ่าน
+                                </h2>
+                                <p className="text-muted-foreground text-sm mt-1">อัพเดทรหัสผ่านของคุณ</p>
+                            </div>
+                            <SecurityTab />
+                        </div>
                     </TabsContent>
                 </Tabs>
             </div>
