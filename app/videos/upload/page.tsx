@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { MultiCategorySelector } from "@/components/multi-category-selector"
 
 interface Category {
   id: string
@@ -31,33 +32,16 @@ export default function UploadVideoPage() {
   const router = useRouter()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [categoryId, setCategoryId] = useState<string>("none")
+  const [categoryIds, setCategoryIds] = useState<string[]>([])
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC")
   const [allowedDomainIds, setAllowedDomainIds] = useState<string[]>([])
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
-  const [categories, setCategories] = useState<Category[]>([])
   const [domains, setDomains] = useState<Domain[]>([])
   const [loading, setLoading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState("")
   const [uploadProgress, setUploadProgress] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const response = await fetch("/api/categories")
-        if (response.ok) {
-          const data = await response.json()
-          setCategories(data.categories)
-        }
-      } catch (error) {
-        console.error("Failed to fetch categories:", error)
-      }
-    }
-
-    fetchCategories()
-  }, [])
 
   useEffect(() => {
     if (visibility !== "DOMAIN_RESTRICTED") {
@@ -236,11 +220,11 @@ export default function UploadVideoPage() {
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim() || undefined,
-          categoryId: categoryId === "none" ? undefined : categoryId,
+          categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
           visibility,
           allowedDomainIds: visibility === "DOMAIN_RESTRICTED" ? allowedDomainIds : undefined,
-          videoKey: videoUpload.key, // New field, or reuse videoUrl? reusing videoUrl is cleaner if we fix it in backend
-          videoUrl: videoUpload.key, // Passing Key as URL for now, Backend MUST fix this.
+          videoKey: videoUpload.key,
+          videoUrl: videoUpload.key,
           thumbnailUrl: thumbnailKey,
           fileSize: videoUpload.size,
           mimeType: videoUpload.type,
@@ -308,19 +292,7 @@ export default function UploadVideoPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>หมวดหมู่</Label>
-                    <Select value={categoryId} onValueChange={setCategoryId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="เลือกหมวดหมู่" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No category</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiCategorySelector value={categoryIds} onValueChange={setCategoryIds} />
                   </div>
 
                   <div className="space-y-2">

@@ -4,7 +4,7 @@ import { z } from "zod"
 export const createVideoSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(2000).optional(),
-  categoryId: z.string().optional(),
+  categoryIds: z.array(z.string()).optional(), // Changed to array for multi-category
   visibility: z.enum(["PUBLIC", "PRIVATE", "DOMAIN_RESTRICTED"]).default("PUBLIC"),
   allowedDomainIds: z.array(z.string()).optional(),
 })
@@ -12,7 +12,7 @@ export const createVideoSchema = z.object({
 export const updateVideoSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
-  categoryId: z.string().optional().nullable(),
+  categoryIds: z.array(z.string()).optional(), // Changed to array for multi-category
   visibility: z.enum(["PUBLIC", "PRIVATE", "DOMAIN_RESTRICTED"]).optional(),
   status: z.enum(["PROCESSING", "READY", "FAILED"]).optional(),
   allowedDomainIds: z.array(z.string()).optional(),

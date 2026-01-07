@@ -170,3 +170,19 @@
   --input: oklch(0.20 0.05 260);
   --ring: oklch(0.65 0.22 260);
 }
+
+/* Fix dropdown scroll jump issue */
+html:has([data-radix-popper-content-wrapper]) {
+  overflow: auto !important;
+}
+
+html:has([data-radix-popper-content-wrapper]),
+html:has([data-radix-popper-content-wrapper]) body {
+  pointer-events: auto !important;
+}
+
+/* Prevent body scroll when select/dropdown is open */
+body:has([data-state="open"][data-radix-select-trigger]) {
+  overflow: hidden;
+}
+

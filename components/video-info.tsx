@@ -30,6 +30,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+interface CategoryRelation {
+  category: { id: string; name: string }
+}
+
 interface Video {
   id: string
   title: string
@@ -38,7 +42,7 @@ interface Video {
   visibility: string
   status: string
   createdAt: string
-  category: { name: string } | null
+  categories: CategoryRelation[]
   createdBy: { name: string | null; email: string }
 }
 
@@ -169,11 +173,13 @@ export function VideoInfo({ videoId }: VideoInfoProps) {
               <p className="text-xs text-muted-foreground">{video.createdBy.email}</p>
             </div>
           </div>
-          {video.category && (
-            <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5">
-              {video.category.name}
-            </Badge>
-          )}
+          <div className="flex flex-wrap gap-1">
+            {video.categories?.map((rel) => (
+              <Badge key={rel.category.id} variant="outline" className="border-primary/20 text-primary bg-primary/5">
+                {rel.category.name}
+              </Badge>
+            ))}
+          </div>
         </div>
 
         <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">

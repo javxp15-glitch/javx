@@ -53,8 +53,8 @@ model Category {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  // Relations
-  videos Video[]
+  // Relations (many-to-many via VideoCategory)
+  videos VideoCategory[]
 
   @@map("categories")
 }
@@ -76,19 +76,32 @@ model Video {
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
   // Foreign Keys
-  categoryId String? @map("category_id")
   createdById String @map("created_by_id")
 
   // Relations
-  category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  createdBy     User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy      User                 @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  categories     VideoCategory[]
   allowedDomains VideoAllowedDomain[]
 
-  @@index([categoryId])
   @@index([createdById])
   @@index([status])
   @@index([visibility])
   @@map("videos")
+}
+
+// Many-to-Many relation between Video and Category
+model VideoCategory {
+  id         String @id @default(cuid())
+  videoId    String @map("video_id")
+  categoryId String @map("category_id")
+
+  video    Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, categoryId])
+  @@index([videoId])
+  @@index([categoryId])
+  @@map("video_categories")
 }
 
 // Allowed Domains for Video Access

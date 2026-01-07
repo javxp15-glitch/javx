@@ -18,32 +18,35 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createVideoSchema.parse(body)
 
-    // Create video with relations
+    // Create video
     const video = await prisma.video.create({
       data: {
         title: validatedData.title,
         description: validatedData.description,
-        videoUrl: body.videoKey ? `${process.env.R2_PUBLIC_DOMAIN}/${body.videoKey}` : body.videoUrl, // Prefer constructing from key if available
+        videoUrl: body.videoKey ? `${process.env.R2_PUBLIC_DOMAIN}/${body.videoKey}` : body.videoUrl,
         thumbnailUrl: body.thumbnailUrl ? (body.thumbnailUrl.startsWith('http') ? body.thumbnailUrl : `${process.env.R2_PUBLIC_DOMAIN}/${body.thumbnailUrl}`) : null,
         duration: body.duration,
         fileSize: body.fileSize,
         mimeType: body.mimeType,
         visibility: validatedData.visibility,
         status: "READY",
-        categoryId: validatedData.categoryId,
         createdById: user.userId,
       },
-      include: {
-        category: true,
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
     })
+
+    // Add categories (many-to-many)
+    if (validatedData.categoryIds && validatedData.categoryIds.length > 0) {
+      await Promise.all(
+        validatedData.categoryIds.map((categoryId) =>
+          prisma.videoCategory.create({
+            data: {
+              videoId: video.id,
+              categoryId: categoryId,
+            },
+          }),
+        ),
+      )
+    }
 
     // Add allowed domains if visibility is DOMAIN_RESTRICTED
     if (validatedData.visibility === "DOMAIN_RESTRICTED" && validatedData.allowedDomainIds) {
@@ -59,10 +62,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Fetch video with relations
+    const videoWithRelations = await prisma.video.findUnique({
+      where: { id: video.id },
+      include: {
+        categories: {
+          include: { category: true },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    })
+
     return NextResponse.json(
       {
         message: "Video created successfully",
-        video,
+        video: videoWithRelations,
       },
       { status: 201 },
     )
@@ -100,9 +120,11 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // Filter by category
+    // Filter by category (now via many-to-many)
     if (validatedQuery.categoryId) {
-      where.categoryId = validatedQuery.categoryId
+      where.categories = {
+        some: { categoryId: validatedQuery.categoryId },
+      }
     }
 
     // Filter by visibility
@@ -137,7 +159,9 @@ export async function GET(request: NextRequest) {
         skip,
         take,
         include: {
-          category: true,
+          categories: {
+            include: { category: true },
+          },
           createdBy: {
             select: {
               id: true,

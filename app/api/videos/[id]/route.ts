@@ -16,7 +16,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const video = await prisma.video.findUnique({
       where: { id: params.id },
       include: {
-        category: true,
+        categories: {
+          include: { category: true },
+        },
         createdBy: {
           select: {
             id: true,
@@ -84,27 +86,38 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     const body = await request.json()
     const validatedData = updateVideoSchema.parse(body)
 
-    // Update video
+    // Update video (without categoryId - now handled via junction table)
     const updatedVideo = await prisma.video.update({
       where: { id: params.id },
       data: {
         title: validatedData.title,
         description: validatedData.description,
-        categoryId: validatedData.categoryId,
         visibility: validatedData.visibility,
         status: validatedData.status,
       },
-      include: {
-        category: true,
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
     })
+
+    // Update categories if provided
+    if (validatedData.categoryIds !== undefined) {
+      // Remove existing category relations
+      await prisma.videoCategory.deleteMany({
+        where: { videoId: params.id },
+      })
+
+      // Add new category relations
+      if (validatedData.categoryIds.length > 0) {
+        await Promise.all(
+          validatedData.categoryIds.map((categoryId) =>
+            prisma.videoCategory.create({
+              data: {
+                videoId: params.id,
+                categoryId: categoryId,
+              },
+            }),
+          ),
+        )
+      }
+    }
 
     // Update allowed domains if needed
     if (validatedData.visibility === "DOMAIN_RESTRICTED" && validatedData.allowedDomainIds) {
@@ -126,9 +139,26 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       )
     }
 
+    // Fetch updated video with relations
+    const videoWithRelations = await prisma.video.findUnique({
+      where: { id: params.id },
+      include: {
+        categories: {
+          include: { category: true },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    })
+
     return NextResponse.json({
       message: "Video updated successfully",
-      video: updatedVideo,
+      video: videoWithRelations,
     })
   } catch (error) {
     console.error("Update video error:", error)

@@ -33,7 +33,17 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     console.log("[v0] Embed request - Video ID:", videoId)
     console.log("[v0] Embed request - Video visibility:", video.visibility)
+    console.log("[v0] Embed request - Video visibility:", video.visibility)
     console.log("[v0] Embed request - Requesting domain:", requestingDomain)
+
+    // Increment view count for all valid requests (Public & Domain Restricted)
+    // We do this asynchronously to not block the response
+    prisma.video.update({
+      where: { id: videoId },
+      data: { views: { increment: 1 } },
+    }).catch(err => console.error("Failed to increment view count:", err))
+
+    // For PUBLIC videos, allow access from anywhere
 
     // For PUBLIC videos, allow access from anywhere
     if (video.visibility === "PUBLIC") {

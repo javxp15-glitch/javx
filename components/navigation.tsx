@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { Globe, Menu, UploadCloud, Video, PlayCircle } from "lucide-react"
+import { Globe, Menu, UploadCloud, Video, PlayCircle, Settings } from "lucide-react"
 
 type NavUser = {
   id: string
@@ -90,7 +90,7 @@ export function Navigation() {
   const navLinks = [
     { href: "/videos", label: "Browse" },
     ...(user ? [{ href: "/videos/upload", label: "Upload" }] : []),
-    ...(user?.role === "ADMIN" ? [{ href: "/admin/domains", label: "Admin" }] : []),
+    ...(user?.role === "ADMIN" ? [{ href: "/admin", label: "Admin" }] : []),
   ]
 
   const handleLogout = async () => {
@@ -226,11 +226,17 @@ export function Navigation() {
                       My Videos
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="rounded-lg focus:bg-white/10">
+                    <Link href="/settings" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
                   {user.role === "ADMIN" && (
                     <DropdownMenuItem asChild className="rounded-lg focus:bg-white/10">
-                      <Link href="/admin/domains" className="cursor-pointer">
+                      <Link href="/admin" className="cursor-pointer">
                         <Globe className="mr-2 h-4 w-4 text-accent" />
-                        Domain Manager
+                        Admin Settings
                       </Link>
                     </DropdownMenuItem>
                   )}
