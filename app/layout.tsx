@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/sonner"
-import { Navigation } from "@/components/navigation"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -40,10 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans antialiased min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground`}>
-        <Navigation />
-        <main className="pt-24 min-h-screen">
-          {children}
-        </main>
+        {children}
         <Toaster />
         <Analytics />
       </body>
