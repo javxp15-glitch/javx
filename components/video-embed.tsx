@@ -13,7 +13,7 @@ interface Category {
   slug: string
 }
 
-interface VideoData {
+export interface VideoData {
   id: string
   title: string
   videoUrl: string
@@ -23,12 +23,20 @@ interface VideoData {
   status: string
 }
 
-export function VideoEmbed({ videoId }: VideoEmbedProps) {
-  const [video, setVideo] = useState<VideoData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface VideoEmbedProps {
+  videoId: string
+  initialVideo?: VideoData | null
+  initialError?: string | null
+}
+
+export function VideoEmbed({ videoId, initialVideo, initialError }: VideoEmbedProps) {
+  const [video, setVideo] = useState<VideoData | null>(initialVideo || null)
+  const [loading, setLoading] = useState(!initialVideo && !initialError)
+  const [error, setError] = useState<string | null>(initialError || null)
 
   useEffect(() => {
+    if (initialVideo || initialError) return
+
     async function fetchVideo() {
       try {
         const response = await fetch(`/api/embed/${videoId}`)
