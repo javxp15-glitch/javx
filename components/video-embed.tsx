@@ -115,21 +115,6 @@ export function VideoEmbed({ videoId, initialVideo, initialError }: VideoEmbedPr
       <div className="flex-shrink-0 p-3 md:p-4 space-y-2 bg-zinc-950/90 backdrop-blur border-t border-white/10 max-h-[40vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-lg md:text-xl font-bold leading-tight line-clamp-2">{video.title}</h1>
-          <div className="flex flex-wrap gap-2 justify-end shrink-0">
-            {video.categories.slice(0, 3).map((category) => (
-              <span
-                key={category.id}
-                className="px-1.5 py-0.5 bg-white/10 text-[10px] md:text-xs rounded text-zinc-300 whitespace-nowrap"
-              >
-                {category.name}
-              </span>
-            ))}
-            {video.categories.length > 3 && (
-              <span className="px-1.5 py-0.5 bg-white/5 text-[10px] md:text-xs rounded text-zinc-500">
-                +{video.categories.length - 3}
-              </span>
-            )}
-          </div>
         </div>
 
         {video.description && (
