@@ -96,37 +96,46 @@ export function VideoEmbed({ videoId, initialVideo, initialError }: VideoEmbedPr
   }
 
   return (
-    <div className="w-full min-h-screen bg-zinc-950 text-white flex flex-col">
-      {/* Video Player Section */}
-      <div className="w-full bg-black aspect-video relative">
-        <video controls autoPlay className="w-full h-full" title={video.title}>
+    <div className="w-full h-screen bg-zinc-950 text-white flex flex-col overflow-hidden">
+      {/* Video Player Section - Takes remaining space */}
+      <div className="flex-1 bg-black relative min-h-0">
+        <video
+          controls
+          autoPlay
+          className="w-full h-full"
+          title={video.title}
+          style={{ objectFit: 'contain' }}
+        >
           <source src={video.videoUrl} type="video/mp4" />
           Your browser does not support the video tag.
         </video>
       </div>
 
-      {/* Metadata Section */}
-      <div className="p-4 md:p-6 space-y-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold leading-tight">{video.title}</h1>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {video.categories.map((category) => (
+      {/* Metadata Section - Auto height */}
+      <div className="flex-shrink-0 p-3 md:p-4 space-y-2 bg-zinc-950/90 backdrop-blur border-t border-white/10 max-h-[40vh] overflow-y-auto">
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-lg md:text-xl font-bold leading-tight line-clamp-2">{video.title}</h1>
+          <div className="flex flex-wrap gap-2 justify-end shrink-0">
+            {video.categories.slice(0, 3).map((category) => (
               <span
                 key={category.id}
-                className="px-2 py-1 bg-white/10 text-xs md:text-sm rounded-md text-zinc-300 backdrop-blur-sm"
+                className="px-1.5 py-0.5 bg-white/10 text-[10px] md:text-xs rounded text-zinc-300 whitespace-nowrap"
               >
                 {category.name}
               </span>
             ))}
+            {video.categories.length > 3 && (
+              <span className="px-1.5 py-0.5 bg-white/5 text-[10px] md:text-xs rounded text-zinc-500">
+                +{video.categories.length - 3}
+              </span>
+            )}
           </div>
         </div>
 
         {video.description && (
-          <div className="mt-4 p-4 bg-zinc-900/50 rounded-lg border border-white/5">
-            <p className="text-sm md:text-base text-zinc-400 whitespace-pre-wrap leading-relaxed">
-              {video.description}
-            </p>
-          </div>
+          <p className="text-xs md:text-sm text-zinc-400 line-clamp-2 hover:line-clamp-none cursor-pointer transition-all">
+            {video.description}
+          </p>
         )}
       </div>
     </div>
