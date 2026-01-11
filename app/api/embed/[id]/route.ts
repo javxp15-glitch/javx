@@ -16,6 +16,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
             domain: true,
           },
         },
+        categories: {
+          include: {
+            category: true,
+          }
+        }
       },
     })
 
@@ -52,6 +57,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           id: video.id,
           title: video.title,
           videoUrl: video.videoUrl,
+          description: video.description,
+          categories: video.categories.map(c => c.category),
           visibility: video.visibility,
           status: video.status,
         },
@@ -77,7 +84,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       console.log("[v0] Domain check result:", isAllowed)
 
       if (!isAllowed) {
-        return NextResponse.json({ error: "This video cannot be embedded on this domain" }, { status: 403 })
+        return NextResponse.json({ error: `This video cannot be embedded on this domain. (Detected: ${requestingDomain || 'None'})` }, { status: 403 })
       }
 
       // Domain is allowed
@@ -86,6 +93,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           id: video.id,
           title: video.title,
           videoUrl: video.videoUrl,
+          description: video.description,
+          categories: video.categories.map(c => c.category),
           visibility: video.visibility,
           status: video.status,
         },

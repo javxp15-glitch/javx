@@ -7,10 +7,18 @@ interface VideoEmbedProps {
   videoId: string
 }
 
+interface Category {
+  id: string
+  name: string
+  slug: string
+}
+
 interface VideoData {
   id: string
   title: string
   videoUrl: string
+  description: string | null
+  categories: Category[]
   visibility: string
   status: string
 }
@@ -80,11 +88,39 @@ export function VideoEmbed({ videoId }: VideoEmbedProps) {
   }
 
   return (
-    <div className="w-full h-screen">
-      <video controls autoPlay className="w-full h-full" title={video.title}>
-        <source src={video.videoUrl} type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
+    <div className="w-full min-h-screen bg-zinc-950 text-white flex flex-col">
+      {/* Video Player Section */}
+      <div className="w-full bg-black aspect-video relative">
+        <video controls autoPlay className="w-full h-full" title={video.title}>
+          <source src={video.videoUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+
+      {/* Metadata Section */}
+      <div className="p-4 md:p-6 space-y-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold leading-tight">{video.title}</h1>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {video.categories.map((category) => (
+              <span
+                key={category.id}
+                className="px-2 py-1 bg-white/10 text-xs md:text-sm rounded-md text-zinc-300 backdrop-blur-sm"
+              >
+                {category.name}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {video.description && (
+          <div className="mt-4 p-4 bg-zinc-900/50 rounded-lg border border-white/5">
+            <p className="text-sm md:text-base text-zinc-400 whitespace-pre-wrap leading-relaxed">
+              {video.description}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
