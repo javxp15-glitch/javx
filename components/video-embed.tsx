@@ -111,20 +111,6 @@ export function VideoEmbed({ videoId, initialVideo, initialError }: VideoEmbedPr
         </video>
       </div>
 
-      {/* Metadata Section - Overlay at Bottom */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-12 opacity-100 transition-opacity duration-300 pointer-events-none group-hover:opacity-100 md:opacity-0">
-        <div className="pointer-events-auto space-y-2 max-w-3xl mx-auto w-full">
-          <h1 className="text-lg md:text-2xl font-bold leading-tight line-clamp-2 drop-shadow-md">
-            {video.title}
-          </h1>
-
-          {video.description && (
-            <p className="text-sm md:text-base text-zinc-200 line-clamp-2 hover:line-clamp-none cursor-pointer transition-all drop-shadow-sm">
-              {video.description}
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
