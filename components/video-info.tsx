@@ -44,6 +44,7 @@ interface Video {
   createdAt: string
   categories: CategoryRelation[]
   createdBy: { name: string | null; email: string }
+  thumbnailUrl: string | null
 }
 
 interface VideoInfoProps {
@@ -143,7 +144,7 @@ export function VideoInfo({ videoId }: VideoInfoProps) {
                   <Edit className="h-4 w-4 mr-2" /> Edit Video
                 </Link>
               </DropdownMenuItem>
-              <EmbedCodeDialog videoId={videoId} videoTitle={video.title} />
+              <EmbedCodeDialog videoId={videoId} videoTitle={video.title} thumbnailUrl={video.thumbnailUrl} />
               <DropdownMenuItem onClick={() => { }} className="text-red-400 focus:text-red-400 focus:bg-red-900/20 cursor-pointer">
                 <div className="flex w-full items-center" onClick={(e) => {
                   e.preventDefault();
