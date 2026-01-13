@@ -105,12 +105,14 @@ export default async function EmbedPage({ params }: PageProps) {
         controls
         autoPlay
         playsInline
+        preload="metadata"
         style={{
           width: '100%',
           height: '100%',
           objectFit: 'contain'
         }}
         title={video.title || "Video Player"}
+        poster={video.thumbnailUrl || undefined}
       >
         <source src={video.videoUrl} type="video/mp4" />
         Your browser does not support the video tag.

@@ -26,7 +26,13 @@ export function EmbedCodeDialog({ videoId, videoTitle, thumbnailUrl }: EmbedCode
   // Escape title for HTML attribute
   const safeTitle = videoTitle.replace(/'/g, "&apos;").replace(/"/g, "&quot;")
 
+  // Get video CDN domain for preconnect
+  const videoCDN = thumbnailUrl ? new URL(thumbnailUrl).origin : 'https://video.blowjob289.com'
+  const embedOrigin = new URL(embedUrl).origin
+
   const facadeHtml = `
+<link rel=preconnect href='${embedOrigin}'>
+<link rel=preconnect href='${videoCDN}'>
 <style>
   *{padding:0;margin:0;overflow:hidden}
   html,body{height:100%}

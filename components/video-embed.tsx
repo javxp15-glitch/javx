@@ -102,6 +102,7 @@ export function VideoEmbed({ videoId, initialVideo, initialError }: VideoEmbedPr
         <video
           controls
           autoPlay
+          preload="metadata"
           className="w-full h-full"
           title={video.title}
           style={{ objectFit: 'contain' }}

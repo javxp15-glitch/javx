@@ -7,20 +7,17 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   try {
     const videoId = params.id
 
-    // Get video from database
+    // Step 1: Get basic video info first (faster query)
     const video = await prisma.video.findUnique({
       where: { id: videoId },
-      include: {
-        allowedDomains: {
-          include: {
-            domain: true,
-          },
-        },
-        categories: {
-          include: {
-            category: true,
-          }
-        }
+      select: {
+        id: true,
+        title: true,
+        videoUrl: true,
+        description: true,
+        visibility: true,
+        status: true,
+        views: true,
       },
     })
 
@@ -52,17 +49,21 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     // For PUBLIC videos, allow access from anywhere
     if (video.visibility === "PUBLIC") {
-      return NextResponse.json({
+      const response = NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
           videoUrl: video.videoUrl,
           description: video.description,
-          categories: video.categories.map(c => c.category),
           visibility: video.visibility,
           status: video.status,
         },
       })
+
+      // Cache public videos for 5 minutes
+      response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=600')
+
+      return response
     }
 
     // For PRIVATE videos, deny embed access
@@ -88,17 +89,21 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       }
 
       // Domain is allowed
-      return NextResponse.json({
+      const response = NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
           videoUrl: video.videoUrl,
           description: video.description,
-          categories: video.categories.map(c => c.category),
           visibility: video.visibility,
           status: video.status,
         },
       })
+
+      // Cache domain-restricted videos for 2 minutes (shorter to allow domain changes)
+      response.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=240')
+
+      return response
     }
 
     return NextResponse.json({ error: "Invalid video configuration" }, { status: 400 })
