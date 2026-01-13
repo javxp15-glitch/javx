@@ -11,8 +11,9 @@ export const metadata = {
   robots: "noindex",
 }
 
-export default async function EmbedPage({ params }: PageProps) {
+export default async function EmbedPage({ params, searchParams }: PageProps & { searchParams?: Promise<{ autoplay?: string }> }) {
   const { id } = await params
+  const search = searchParams ? await searchParams : {}
 
   // 1. Get request headers for domain check
   const headersList = await headers()
@@ -99,13 +100,17 @@ export default async function EmbedPage({ params }: PageProps) {
   }).catch(console.error)
 
   // 5. Render Raw HTML Video Player
+  const shouldAutoPlay = search.autoplay === '1'
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#000' }}>
       <video
         controls
-        autoPlay
+        autoPlay={shouldAutoPlay}
+        muted={shouldAutoPlay}
         playsInline
         preload="metadata"
+        webkit-playsinline="true"
         style={{
           width: '100%',
           height: '100%',

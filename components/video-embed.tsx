@@ -101,11 +101,12 @@ export function VideoEmbed({ videoId, initialVideo, initialError }: VideoEmbedPr
       <div className="absolute inset-0">
         <video
           controls
-          autoPlay
+          playsInline
           preload="metadata"
           className="w-full h-full"
           title={video.title}
           style={{ objectFit: 'contain' }}
+          webkit-playsinline="true"
         >
           <source src={video.videoUrl} type="video/mp4" />
           Your browser does not support the video tag.

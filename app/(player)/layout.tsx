@@ -4,6 +4,12 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
     title: "Video Embed",
     robots: "noindex",
+    viewport: {
+        width: 'device-width',
+        initialScale: 1,
+        maximumScale: 1,
+        userScalable: false,
+    },
 }
 
 export default function EmbedLayout({
