@@ -1,6 +1,7 @@
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { extractDomain } from "@/lib/domain-security"
+import { getVideoUrl } from "@/lib/video-url"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -102,6 +103,9 @@ export default async function EmbedPage({ params, searchParams }: PageProps & { 
   // 5. Render Raw HTML Video Player
   const shouldAutoPlay = search.autoplay === '1'
 
+  // Use proxy URL for iOS compatibility (Range requests, CORS)
+  const proxiedVideoUrl = getVideoUrl(video.videoUrl, true)
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#000' }}>
       <video
@@ -119,7 +123,7 @@ export default async function EmbedPage({ params, searchParams }: PageProps & { 
         title={video.title || "Video Player"}
         poster={video.thumbnailUrl || undefined}
       >
-        <source src={video.videoUrl} type="video/mp4" />
+        <source src={proxiedVideoUrl} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
     </div>

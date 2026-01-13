@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getRequestingDomain, isDomainAllowedForVideo } from "@/lib/domain-security"
+import { getVideoUrl } from "@/lib/video-url"
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: video.videoUrl,
+          videoUrl: getVideoUrl(video.videoUrl, true), // Use proxy for iOS compatibility
           description: video.description,
           visibility: video.visibility,
           status: video.status,
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: video.videoUrl,
+          videoUrl: getVideoUrl(video.videoUrl, true), // Use proxy for iOS compatibility
           description: video.description,
           visibility: video.visibility,
           status: video.status,

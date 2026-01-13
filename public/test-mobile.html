@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Video Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .container {
+            padding: 20px;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .test-section h2 {
+            font-size: 16px;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        .test-section p {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 15px;
+        }
+        .video-wrapper {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #111;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .info div {
+            margin: 5px 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .status.pass { background: #4CAF50; }
+        .status.fail { background: #f44336; }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 10px;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Mobile Video Playback Test</h1>
+
+        <!-- Test 1: Direct Video -->
+        <div class="test-section">
+            <h2>Test 1: Direct HTML5 Video</h2>
+            <p>ทดสอบ video tag โดยตรงพร้อม mobile attributes</p>
+            <div class="video-wrapper">
+                <video
+                    id="test1"
+                    controls
+                    playsInline
+                    webkit-playsinline="true"
+                    preload="metadata"
+                    poster="https://via.placeholder.com/640x360/1a1a1a/ffffff?text=Direct+Video"
+                >
+                    <source src="https://video.blowjob289.com/[VIDEO_KEY].mp4" type="video/mp4">
+                    Your browser does not support video.
+                </video>
+            </div>
+            <div class="info">
+                <div>✅ Viewport: <span class="status pass">PASS</span></div>
+                <div>✅ playsInline: <span class="status pass">PASS</span></div>
+                <div>✅ webkit-playsinline: <span class="status pass">PASS</span></div>
+                <div>📱 กด play ด้วยตัวเอง (ไม่ autoplay)</div>
+            </div>
+        </div>
+
+        <!-- Test 2: Iframe Embed -->
+        <div class="test-section">
+            <h2>Test 2: Iframe Embed</h2>
+            <p>ทดสอบ iframe embed จาก embed endpoint</p>
+            <div class="video-wrapper">
+                <iframe
+                    id="test2"
+                    src="https://blowjob289.com/embed/[VIDEO_ID]"
+                    allowfullscreen
+                    loading="lazy"
+                    title="Iframe Embed Test"
+                ></iframe>
+            </div>
+            <div class="info">
+                <div>✅ Iframe loading: <span class="status pass">PASS</span></div>
+                <div>✅ Allowfullscreen: <span class="status pass">PASS</span></div>
+                <div>🔄 วีดีโอจะโหลดผ่าน iframe</div>
+            </div>
+        </div>
+
+        <!-- Test 3: Autoplay (Muted) -->
+        <div class="test-section">
+            <h2>Test 3: Autoplay + Muted</h2>
+            <p>ทดสอบ autoplay ที่ทำงานได้บนมือถือ (ต้อง muted)</p>
+            <div class="video-wrapper">
+                <video
+                    id="test3"
+                    controls
+                    autoplay
+                    muted
+                    playsInline
+                    webkit-playsinline="true"
+                    preload="metadata"
+                    poster="https://via.placeholder.com/640x360/1a1a1a/ffffff?text=Autoplay+Muted"
+                >
+                    <source src="https://video.blowjob289.com/[VIDEO_KEY].mp4" type="video/mp4">
+                    Your browser does not support video.
+                </video>
+            </div>
+            <div class="info">
+                <div>✅ Autoplay: <span class="status pass">PASS</span></div>
+                <div>✅ Muted: <span class="status pass">PASS</span></div>
+                <div>🔇 จะเล่นอัตโนมัติแบบไม่มีเสียง (กด unmute เพื่อเปิดเสียง)</div>
+            </div>
+        </div>
+
+        <!-- Device Info -->
+        <div class="test-section">
+            <h2>📱 Device Information</h2>
+            <div class="info" id="deviceInfo">
+                <div>Loading device info...</div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="test-section">
+            <h2>📝 วิธีทดสอบ:</h2>
+            <div class="info">
+                <div>1. เปิดไฟล์นี้บนมือถือ (iPhone หรือ Android)</div>
+                <div>2. ทดสอบกด play ในแต่ละ video</div>
+                <div>3. เช็คว่า:</div>
+                <div>&nbsp;&nbsp;&nbsp;• วีดีโอเล่นใน inline mode (ไม่บังคับ fullscreen)</div>
+                <div>&nbsp;&nbsp;&nbsp;• Controls ใช้งานได้ปกติ</div>
+                <div>&nbsp;&nbsp;&nbsp;• Video แสดงผลเต็มพื้นที่</div>
+                <div>&nbsp;&nbsp;&nbsp;• Test 3 เล่นอัตโนมัติ (muted)</div>
+                <div>4. ลอง rotate หน้าจอ (portrait ↔ landscape)</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; color: #666;">
+            <p>⚠️ แทนที่ [VIDEO_ID] และ [VIDEO_KEY] ด้วย ID จริงของวีดีโอ</p>
+        </div>
+    </div>
+
+    <script>
+        // Display device information
+        function displayDeviceInfo() {
+            const info = document.getElementById('deviceInfo');
+            const ua = navigator.userAgent;
+
+            let deviceType = 'Unknown';
+            if (/iPhone|iPad|iPod/.test(ua)) {
+                deviceType = 'iOS Device (Safari)';
+            } else if (/Android/.test(ua)) {
+                deviceType = 'Android Device';
+            } else if (/Mobile/.test(ua)) {
+                deviceType = 'Mobile Device';
+            } else {
+                deviceType = 'Desktop Browser';
+            }
+
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+            info.innerHTML = `
+                <div><strong>Device:</strong> ${deviceType}</div>
+                <div><strong>Screen:</strong> ${window.innerWidth}x${window.innerHeight}px</div>
+                <div><strong>Pixel Ratio:</strong> ${window.devicePixelRatio}x</div>
+                <div><strong>User Agent:</strong> ${ua.substring(0, 80)}...</div>
+                <div><strong>Standalone Mode:</strong> ${isStandalone ? 'Yes' : 'No'}</div>
+                <div><strong>Touch Support:</strong> ${'ontouchstart' in window ? 'Yes' : 'No'}</div>
+            `;
+        }
+
+        // Check video playback events
+        ['test1', 'test2', 'test3'].forEach(id => {
+            const video = document.getElementById(id);
+            if (video && video.tagName === 'VIDEO') {
+                video.addEventListener('play', () => {
+                    console.log(`✅ ${id}: Video started playing`);
+                });
+                video.addEventListener('error', (e) => {
+                    console.error(`❌ ${id}: Video error`, e);
+                });
+            }
+        });
+
+        // Display info on load
+        window.addEventListener('load', displayDeviceInfo);
+        window.addEventListener('resize', displayDeviceInfo);
+    </script>
+</body>
+</html>
