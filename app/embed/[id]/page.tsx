@@ -1,5 +1,4 @@
 import { headers } from "next/headers"
-import { VideoEmbed } from "@/components/video-embed"
 import { prisma } from "@/lib/prisma"
 import { extractDomain } from "@/lib/domain-security"
 
@@ -26,20 +25,35 @@ export default async function EmbedPage({ params }: PageProps) {
       allowedDomains: {
         include: { domain: true },
       },
-      categories: {
-        include: { category: true },
-      }
     },
   })
 
+  // Error Helper
+  const ErrorScreen = ({ message, icon = "!" }: { message: string, icon?: string }) => (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100vh',
+      width: '100vw',
+      backgroundColor: '#000',
+      color: '#fff',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      <div style={{ fontSize: '48px', marginBottom: '16px' }}>{icon}</div>
+      <p style={{ fontSize: '16px', color: '#ccc' }}>{message}</p>
+    </div>
+  )
+
   // Case: Video not found
   if (!video) {
-    return <VideoEmbed videoId={id} initialError="Video not found" initialVideo={null} />
+    return <ErrorScreen message="Video not found" />
   }
 
   // Case: Not Ready
   if (video.status !== "READY") {
-    return <VideoEmbed videoId={id} initialError="Video is not ready" initialVideo={null} />
+    return <ErrorScreen message="Video is not ready" />
   }
 
   // 3. Domain Security Check (Server-Side)
@@ -59,7 +73,6 @@ export default async function EmbedPage({ params }: PageProps) {
       const requestingDomain = extractDomain(referer)
       const allowedDomains = video.allowedDomains.map((ad) => ad.domain.domain)
 
-      // Check logic
       const match = allowedDomains.some((allowedDomain) => {
         const normalizedRequesting = requestingDomain?.replace(/^www\./, "") || ""
         const normalizedAllowed = allowedDomain.replace(/^www\./, "")
@@ -70,36 +83,38 @@ export default async function EmbedPage({ params }: PageProps) {
         isAllowed = true
       } else {
         isAllowed = false
-        // Debug info included for user
-        errorMsg = `This video cannot be embedded on this domain. (Detected: ${requestingDomain || 'None'})`
+        errorMsg = `This video cannot be embedded on this domain.`
       }
     }
   }
 
   if (!isAllowed) {
-    return <VideoEmbed videoId={id} initialError={errorMsg || "Access denied"} initialVideo={null} />
+    return <ErrorScreen message={errorMsg || "Access denied"} icon="🔒" />
   }
 
   // 4. Increment View Count (Fire and forget, non-blocking)
-  // Note: manipulating DB inside render is generally okay for View Count if carefully managed,
-  // but to be safe and avoid "Writes during render" warnings in Strict Mode, purely read here OR use a Server Action.
-  // Actually, for a simple GET page visit, doing it here is a common pattern in Next.js App Router for simple analytics.
-  // We'll trust Next.js to handle the cache invalidation or just ignore the promise result.
   prisma.video.update({
     where: { id },
     data: { views: { increment: 1 } },
   }).catch(console.error)
 
-  // 5. Construct Video Data for Client
-  const videoData = {
-    id: video.id,
-    title: video.title,
-    videoUrl: video.videoUrl,
-    description: video.description,
-    categories: video.categories.map(c => c.category),
-    visibility: video.visibility,
-    status: video.status,
-  }
-
-  return <VideoEmbed videoId={id} initialVideo={videoData} initialError={null} />
+  // 5. Render Raw HTML Video Player
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#000' }}>
+      <video
+        controls
+        autoPlay
+        playsInline
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain'
+        }}
+        title={video.title || "Video Player"}
+      >
+        <source src={video.videoUrl} type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  )
 }
