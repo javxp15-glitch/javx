@@ -63,18 +63,23 @@ export async function getUserFromRequest(request: NextRequest): Promise<JWTPaylo
   try {
     const hashedToken = hashApiToken(token)
     const apiToken = await prisma.apiToken.findUnique({
-      where: { token: hashedToken },
-      include: { user: true },
+      where: { tokenHash: hashedToken },
+      include: { createdBy: true },
     })
 
     if (apiToken && (!apiToken.expiresAt || apiToken.expiresAt > new Date())) {
-      // Return a simulated payload for the API token user
-      // Assuming API tokens should have ADMIN or EDITOR privileges based on the user who created them
-      // Or we can assign a fixed role if required. For now, we use the owner's role.
+      if (apiToken.revokedAt) return null
+
+      // Update last used at (non-blocking)
+      prisma.apiToken.update({
+        where: { id: apiToken.id },
+        data: { lastUsedAt: new Date() },
+      }).catch(console.error)
+
       return {
-        userId: apiToken.userId,
-        email: apiToken.user.email,
-        role: apiToken.user.role,
+        userId: apiToken.createdById,
+        email: apiToken.createdBy.email,
+        role: apiToken.createdBy.role,
       }
     }
   } catch (error) {
