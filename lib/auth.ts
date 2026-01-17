@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server"
 import { jwtVerify, SignJWT } from "jose"
 import bcrypt from "bcryptjs"
+import { prisma } from "@/lib/prisma"
+import { createHash } from "crypto"
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key-change-in-production")
 
@@ -27,21 +29,60 @@ export async function generateToken(payload: JWTPayload): Promise<string> {
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET)
-    return payload as JWTPayload
+    return payload as unknown as JWTPayload
   } catch (error) {
     return null
   }
 }
 
 /**
- * Get user from request
+ * Hash API Token (SHA-256)
+ */
+export function hashApiToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex")
+}
+
+/**
+ * Get user from request (Supports JWT and API Token)
  */
 export async function getUserFromRequest(request: NextRequest): Promise<JWTPayload | null> {
-  const token = request.cookies.get("token")?.value || request.headers.get("authorization")?.replace("Bearer ", "")
+  const authHeader = request.headers.get("authorization")
+  const token = request.cookies.get("token")?.value || authHeader?.replace("Bearer ", "")
 
   if (!token) return null
 
-  return await verifyToken(token)
+  // 1. Try Validating as JWT
+  const jwtPayload = await verifyToken(token)
+  if (jwtPayload) {
+    return jwtPayload
+  }
+
+  // 2. Try Validating as API Token
+  // Optimization: Only check DB if token format looks like an API key (e.g. starts with 'javx_')
+  // For now, checks everything that isn't a JWT
+  try {
+    const hashedToken = hashApiToken(token)
+    const apiToken = await prisma.apiToken.findUnique({
+      where: { token: hashedToken },
+      include: { user: true },
+    })
+
+    if (apiToken && (!apiToken.expiresAt || apiToken.expiresAt > new Date())) {
+      // Return a simulated payload for the API token user
+      // Assuming API tokens should have ADMIN or EDITOR privileges based on the user who created them
+      // Or we can assign a fixed role if required. For now, we use the owner's role.
+      return {
+        userId: apiToken.userId,
+        email: apiToken.user.email,
+        role: apiToken.user.role,
+      }
+    }
+  } catch (error) {
+    // Ignore DB errors (e.g. if DB not reachable)
+    console.error("API Token validation error:", error)
+  }
+
+  return null
 }
 
 /**

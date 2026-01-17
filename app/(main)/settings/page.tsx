@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { User, Lock, Settings, UserCircle } from "lucide-react"
 import { toast } from "sonner"
+import { AdminTokenManager } from "@/components/admin-token-manager"
 
 interface UserProfile {
     id: string
@@ -232,6 +233,13 @@ export default function SettingsPage() {
                             <Lock className="h-4 w-4" />
                             ความปลอดภัย
                         </TabsTrigger>
+                        <TabsTrigger
+                            value="api"
+                            className="flex items-center gap-2 data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg px-6 py-2.5"
+                        >
+                            <Settings className="h-4 w-4" />
+                            API Tokens
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="profile">
@@ -257,6 +265,12 @@ export default function SettingsPage() {
                                 <p className="text-muted-foreground text-sm mt-1">อัพเดทรหัสผ่านของคุณ</p>
                             </div>
                             <SecurityTab />
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="api">
+                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 max-w-2xl">
+                            <AdminTokenManager />
                         </div>
                     </TabsContent>
                 </Tabs>

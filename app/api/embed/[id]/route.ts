@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getSignedPlaybackUrl, normalizeR2Url } from "@/lib/r2"
 import { getRequestingDomain, isDomainAllowedForVideo } from "@/lib/domain-security"
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -16,11 +17,6 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
             domain: true,
           },
         },
-        categories: {
-          include: {
-            category: true,
-          }
-        }
       },
     })
 
@@ -38,27 +34,16 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     console.log("[v0] Embed request - Video ID:", videoId)
     console.log("[v0] Embed request - Video visibility:", video.visibility)
-    console.log("[v0] Embed request - Video visibility:", video.visibility)
     console.log("[v0] Embed request - Requesting domain:", requestingDomain)
-
-    // Increment view count for all valid requests (Public & Domain Restricted)
-    // We do this asynchronously to not block the response
-    prisma.video.update({
-      where: { id: videoId },
-      data: { views: { increment: 1 } },
-    }).catch(err => console.error("Failed to increment view count:", err))
-
-    // For PUBLIC videos, allow access from anywhere
 
     // For PUBLIC videos, allow access from anywhere
     if (video.visibility === "PUBLIC") {
+      const resolvedVideoUrl = await getSignedPlaybackUrl(video.videoUrl)
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: video.videoUrl,
-          description: video.description,
-          categories: video.categories.map(c => c.category),
+          videoUrl: resolvedVideoUrl ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl,
           visibility: video.visibility,
           status: video.status,
         },
@@ -84,17 +69,16 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       console.log("[v0] Domain check result:", isAllowed)
 
       if (!isAllowed) {
-        return NextResponse.json({ error: `This video cannot be embedded on this domain. (Detected: ${requestingDomain || 'None'})` }, { status: 403 })
+        return NextResponse.json({ error: "This video cannot be embedded on this domain" }, { status: 403 })
       }
 
       // Domain is allowed
+      const resolvedVideoUrl = await getSignedPlaybackUrl(video.videoUrl)
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: video.videoUrl,
-          description: video.description,
-          categories: video.categories.map(c => c.category),
+          videoUrl: resolvedVideoUrl ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl,
           visibility: video.visibility,
           status: video.status,
         },

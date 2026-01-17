@@ -4,7 +4,7 @@ import { z } from "zod"
 export const createVideoSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(2000).optional(),
-  categoryIds: z.array(z.string()).optional(), // Changed to array for multi-category
+  categoryId: z.string().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "DOMAIN_RESTRICTED"]).default("PUBLIC"),
   allowedDomainIds: z.array(z.string()).optional(),
 })
@@ -12,7 +12,7 @@ export const createVideoSchema = z.object({
 export const updateVideoSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
-  categoryIds: z.array(z.string()).optional(), // Changed to array for multi-category
+  categoryId: z.string().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "DOMAIN_RESTRICTED"]).optional(),
   status: z.enum(["PROCESSING", "READY", "FAILED"]).optional(),
   allowedDomainIds: z.array(z.string()).optional(),
@@ -21,10 +21,12 @@ export const updateVideoSchema = z.object({
 export const videoQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
+  per_page: z.coerce.number().optional(), // Alias for limit
   search: z.string().optional(),
   categoryId: z.string().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "DOMAIN_RESTRICTED"]).optional(),
   sort: z.enum(["newest", "oldest", "popular"]).default("newest"),
+  since: z.string().optional(),
 })
 
 // Auth Validation Schemas

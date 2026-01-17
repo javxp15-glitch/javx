@@ -1,7 +1,31 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getUserFromRequest } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getSignedPlaybackUrl, normalizeR2Url, toPublicPlaybackUrl } from "@/lib/r2"
 import { updateVideoSchema } from "@/lib/validation"
+
+const mapPluginVideo = (video: {
+  id: string
+  title: string
+  description: string | null
+  videoUrl: string
+  thumbnailUrl: string | null
+  duration: number | null
+  createdAt: Date
+  updatedAt: Date
+  category?: { name: string } | null
+}) => ({
+  id: video.id,
+  title: video.title,
+  description: video.description ?? "",
+  video_url: normalizeR2Url(video.videoUrl),
+  playback_url: toPublicPlaybackUrl(video.videoUrl) ?? normalizeR2Url(video.videoUrl),
+  thumbnail_url: normalizeR2Url(video.thumbnailUrl),
+  duration: video.duration,
+  tags: video.category?.name ? [video.category.name] : [],
+  created_at: video.createdAt,
+  updated_at: video.updatedAt,
+})
 import { deleteFromR2 } from "@/lib/r2"
 
 // GET - Get video by ID
@@ -16,9 +40,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const video = await prisma.video.findUnique({
       where: { id: params.id },
       include: {
-        categories: {
-          include: { category: true },
-        },
+        category: true,
         createdBy: {
           select: {
             id: true,
@@ -50,7 +72,25 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       data: { views: { increment: 1 } },
     })
 
-    return NextResponse.json({ video })
+    const userAgent = request.headers.get("user-agent") ?? ""
+    const isPluginRequest = Boolean(request.headers.get("authorization")) || userAgent.includes("7LS-Video-Publisher")
+    const resolvedVideoUrl = await getSignedPlaybackUrl(video.videoUrl)
+    const normalizedVideo = {
+      ...video,
+      videoUrl: resolvedVideoUrl ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl,
+      thumbnailUrl: normalizeR2Url(video.thumbnailUrl),
+    }
+
+    if (isPluginRequest) {
+      const cleanUrl = normalizedVideo.videoUrl.split("?")[0].toLowerCase()
+      const isMp4 = video.mimeType?.toLowerCase() === "video/mp4" || cleanUrl.endsWith(".mp4")
+      if (!isMp4) {
+        return NextResponse.json({ error: "Video is still processing" }, { status: 409 })
+      }
+      return NextResponse.json({ data: mapPluginVideo(normalizedVideo) })
+    }
+
+    return NextResponse.json({ video: normalizedVideo })
   } catch (error) {
     console.error("Get video error:", error)
     return NextResponse.json({ error: "Failed to fetch video" }, { status: 500 })
@@ -86,38 +126,27 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     const body = await request.json()
     const validatedData = updateVideoSchema.parse(body)
 
-    // Update video (without categoryId - now handled via junction table)
+    // Update video
     const updatedVideo = await prisma.video.update({
       where: { id: params.id },
       data: {
         title: validatedData.title,
         description: validatedData.description,
+        categoryId: validatedData.categoryId,
         visibility: validatedData.visibility,
         status: validatedData.status,
       },
+      include: {
+        category: true,
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     })
-
-    // Update categories if provided
-    if (validatedData.categoryIds !== undefined) {
-      // Remove existing category relations
-      await prisma.videoCategory.deleteMany({
-        where: { videoId: params.id },
-      })
-
-      // Add new category relations
-      if (validatedData.categoryIds.length > 0) {
-        await Promise.all(
-          validatedData.categoryIds.map((categoryId) =>
-            prisma.videoCategory.create({
-              data: {
-                videoId: params.id,
-                categoryId: categoryId,
-              },
-            }),
-          ),
-        )
-      }
-    }
 
     // Update allowed domains if needed
     if (validatedData.visibility === "DOMAIN_RESTRICTED" && validatedData.allowedDomainIds) {
@@ -139,26 +168,9 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       )
     }
 
-    // Fetch updated video with relations
-    const videoWithRelations = await prisma.video.findUnique({
-      where: { id: params.id },
-      include: {
-        categories: {
-          include: { category: true },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
-
     return NextResponse.json({
       message: "Video updated successfully",
-      video: videoWithRelations,
+      video: updatedVideo,
     })
   } catch (error) {
     console.error("Update video error:", error)

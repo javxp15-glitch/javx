@@ -1,7 +1,33 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getUserFromRequest } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getSignedPlaybackUrl, normalizeR2Url, toPublicPlaybackUrl } from "@/lib/r2"
 import { createVideoSchema, videoQuerySchema } from "@/lib/validation"
+import { enqueueVideoTranscode } from "@/lib/video-transcode"
+
+const mapPluginVideo = (video: {
+  id: string
+  title: string
+  description: string | null
+  videoUrl: string
+  thumbnailUrl: string | null
+  duration: number | null
+  createdAt: Date
+  updatedAt: Date
+  category?: { name: string } | null
+}) => ({
+  id: video.id,
+  title: video.title,
+  description: video.description ?? "",
+  video_url: normalizeR2Url(video.videoUrl),
+  embed_url: `/embed/${video.id}`, // Expose embed URL for plugins
+  playback_url: toPublicPlaybackUrl(video.videoUrl) ?? normalizeR2Url(video.videoUrl),
+  thumbnail_url: normalizeR2Url(video.thumbnailUrl),
+  duration: video.duration,
+  tags: video.category?.name ? [video.category.name] : [],
+  created_at: video.createdAt,
+  updated_at: video.updatedAt,
+})
 
 // POST - Create new video
 export async function POST(request: NextRequest) {
@@ -18,35 +44,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createVideoSchema.parse(body)
 
-    // Create video
+    // Create video with relations
     const video = await prisma.video.create({
       data: {
         title: validatedData.title,
         description: validatedData.description,
-        videoUrl: body.videoKey ? `${process.env.R2_PUBLIC_DOMAIN}/${body.videoKey}` : body.videoUrl,
-        thumbnailUrl: body.thumbnailUrl ? (body.thumbnailUrl.startsWith('http') ? body.thumbnailUrl : `${process.env.R2_PUBLIC_DOMAIN}/${body.thumbnailUrl}`) : null,
+        videoUrl: body.videoUrl, // From upload endpoint
+        thumbnailUrl: body.thumbnailUrl,
         duration: body.duration,
         fileSize: body.fileSize,
         mimeType: body.mimeType,
         visibility: validatedData.visibility,
         status: "READY",
+        categoryId: validatedData.categoryId,
         createdById: user.userId,
       },
+      include: {
+        category: true,
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     })
-
-    // Add categories (many-to-many)
-    if (validatedData.categoryIds && validatedData.categoryIds.length > 0) {
-      await Promise.all(
-        validatedData.categoryIds.map((categoryId) =>
-          prisma.videoCategory.create({
-            data: {
-              videoId: video.id,
-              categoryId: categoryId,
-            },
-          }),
-        ),
-      )
-    }
 
     // Add allowed domains if visibility is DOMAIN_RESTRICTED
     if (validatedData.visibility === "DOMAIN_RESTRICTED" && validatedData.allowedDomainIds) {
@@ -62,27 +85,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch video with relations
-    const videoWithRelations = await prisma.video.findUnique({
-      where: { id: video.id },
-      include: {
-        categories: {
-          include: { category: true },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
+    enqueueVideoTranscode(video.id, video.videoUrl, video.mimeType)
 
     return NextResponse.json(
       {
         message: "Video created successfully",
-        video: videoWithRelations,
+        video,
       },
       { status: 201 },
     )
@@ -106,10 +114,41 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const query = Object.fromEntries(searchParams.entries())
     const validatedQuery = videoQuerySchema.parse(query)
+    const limit = validatedQuery.per_page ?? validatedQuery.limit
+    const parseSinceDate = (value?: string) => {
+      if (!value) return null
+      const numeric = Number(value)
+      if (Number.isFinite(numeric)) {
+        const ms = numeric < 1_000_000_000_000 ? numeric * 1000 : numeric
+        const date = new Date(ms)
+        if (!Number.isNaN(date.getTime())) {
+          return date
+        }
+      }
+      const date = new Date(value)
+      if (!Number.isNaN(date.getTime())) {
+        return date
+      }
+      return null
+    }
+    const userAgent = request.headers.get("user-agent") ?? ""
+    const isPluginRequest =
+      searchParams.has("per_page") ||
+      searchParams.has("project_id") ||
+      searchParams.has("since") ||
+      userAgent.includes("7LS-Video-Publisher")
 
     // Build where clause
     const where: any = {
       status: "READY",
+    }
+    if (isPluginRequest) {
+      const mp4Filter = { OR: [{ mimeType: "video/mp4" }, { videoUrl: { endsWith: ".mp4" } }] }
+      if (Array.isArray(where.AND)) {
+        where.AND.push(mp4Filter)
+      } else {
+        where.AND = [mp4Filter]
+      }
     }
 
     // Search by title or description
@@ -120,11 +159,9 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // Filter by category (now via many-to-many)
+    // Filter by category
     if (validatedQuery.categoryId) {
-      where.categories = {
-        some: { categoryId: validatedQuery.categoryId },
-      }
+      where.categoryId = validatedQuery.categoryId
     }
 
     // Filter by visibility
@@ -135,6 +172,13 @@ export async function GET(request: NextRequest) {
     // Non-admin users can only see public videos and their own
     if (user.role !== "ADMIN") {
       where.OR = [{ visibility: "PUBLIC" }, { createdById: user.userId }]
+    }
+
+    if (validatedQuery.since) {
+      const sinceDate = parseSinceDate(validatedQuery.since)
+      if (sinceDate) {
+        where.updatedAt = { gt: sinceDate }
+      }
     }
 
     // Sorting
@@ -148,8 +192,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Pagination
-    const skip = (validatedQuery.page - 1) * validatedQuery.limit
-    const take = validatedQuery.limit
+    const skip = (validatedQuery.page - 1) * limit
+    const take = limit
 
     // Execute query
     const [videos, total] = await Promise.all([
@@ -159,9 +203,7 @@ export async function GET(request: NextRequest) {
         skip,
         take,
         include: {
-          categories: {
-            include: { category: true },
-          },
+          category: true,
           createdBy: {
             select: {
               id: true,
@@ -174,13 +216,41 @@ export async function GET(request: NextRequest) {
       prisma.video.count({ where }),
     ])
 
+    const normalizedVideos = await Promise.all(
+      videos.map(async (video) => {
+        const resolvedVideoUrl = isPluginRequest ? await getSignedPlaybackUrl(video.videoUrl) : null
+        return {
+          ...video,
+          videoUrl: resolvedVideoUrl ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl,
+          thumbnailUrl: normalizeR2Url(video.thumbnailUrl),
+        }
+      }),
+    )
+
+    if (isPluginRequest) {
+      const totalPages = Math.ceil(total / limit)
+      const hasMore = validatedQuery.page * limit < total
+
+      return NextResponse.json({
+        data: normalizedVideos.map((video) => mapPluginVideo(video)),
+        pagination: {
+          page: validatedQuery.page,
+          per_page: limit,
+          total,
+          total_pages: totalPages,
+          next_page: hasMore ? validatedQuery.page + 1 : null,
+          has_more: hasMore,
+        },
+      })
+    }
+
     return NextResponse.json({
-      videos,
+      videos: normalizedVideos,
       pagination: {
         page: validatedQuery.page,
-        limit: validatedQuery.limit,
+        limit,
         total,
-        totalPages: Math.ceil(total / validatedQuery.limit),
+        totalPages: Math.ceil(total / limit),
       },
     })
   } catch (error) {
