@@ -66,11 +66,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Increment view count
-    await prisma.video.update({
+    // Increment view count (fire-and-forget, non-blocking)
+    prisma.video.update({
       where: { id: params.id },
       data: { views: { increment: 1 } },
-    })
+    }).catch(console.error)
 
     const userAgent = request.headers.get("user-agent") ?? ""
     const isPluginRequest = Boolean(request.headers.get("authorization")) || userAgent.includes("7LS-Video-Publisher")

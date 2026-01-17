@@ -1,6 +1,10 @@
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { extractDomain } from "@/lib/domain-security"
+import { normalizeR2Url } from "@/lib/r2"
+
+// Cache this page for 60 seconds
+export const revalidate = 60
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -112,7 +116,7 @@ export default async function EmbedPage({ params }: PageProps) {
         }}
         title={video.title || "Video Player"}
       >
-        <source src={video.videoUrl} type="video/mp4" />
+        <source src={normalizeR2Url(video.videoUrl) || video.videoUrl} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
     </div>

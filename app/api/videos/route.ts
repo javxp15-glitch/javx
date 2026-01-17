@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getUserFromRequest } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getSignedPlaybackUrl, normalizeR2Url, toPublicPlaybackUrl } from "@/lib/r2"
+import { normalizeR2Url, toPublicPlaybackUrl } from "@/lib/r2"
 import { createVideoSchema, videoQuerySchema } from "@/lib/validation"
 import { enqueueVideoTranscode } from "@/lib/video-transcode"
 
@@ -216,16 +216,13 @@ export async function GET(request: NextRequest) {
       prisma.video.count({ where }),
     ])
 
-    const normalizedVideos = await Promise.all(
-      videos.map(async (video) => {
-        const resolvedVideoUrl = isPluginRequest ? await getSignedPlaybackUrl(video.videoUrl) : null
-        return {
-          ...video,
-          videoUrl: resolvedVideoUrl ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl,
-          thumbnailUrl: normalizeR2Url(video.thumbnailUrl),
-        }
-      }),
-    )
+    const normalizedVideos = videos.map((video) => {
+      return {
+        ...video,
+        videoUrl: normalizeR2Url(video.videoUrl) ?? video.videoUrl,
+        thumbnailUrl: normalizeR2Url(video.thumbnailUrl),
+      }
+    })
 
     if (isPluginRequest) {
       const totalPages = Math.ceil(total / limit)

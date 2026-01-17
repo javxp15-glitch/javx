@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getSignedPlaybackUrl, normalizeR2Url } from "@/lib/r2"
+import { normalizeR2Url } from "@/lib/r2"
 import { getRequestingDomain, isDomainAllowedForVideo } from "@/lib/domain-security"
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -38,15 +38,20 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     // For PUBLIC videos, allow access from anywhere
     if (video.visibility === "PUBLIC") {
-      const resolvedVideoUrl = await getSignedPlaybackUrl(video.videoUrl)
+      // Use public URL for better performance (no signed URL generation)
+      const resolvedVideoUrl = normalizeR2Url(video.videoUrl) ?? video.videoUrl
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: resolvedVideoUrl ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl,
+          videoUrl: resolvedVideoUrl,
           visibility: video.visibility,
           status: video.status,
         },
+      }, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+        }
       })
     }
 
@@ -72,16 +77,20 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         return NextResponse.json({ error: "This video cannot be embedded on this domain" }, { status: 403 })
       }
 
-      // Domain is allowed
-      const resolvedVideoUrl = await getSignedPlaybackUrl(video.videoUrl)
+      // Domain is allowed - use public URL for better performance
+      const resolvedVideoUrl = normalizeR2Url(video.videoUrl) ?? video.videoUrl
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: resolvedVideoUrl ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl,
+          videoUrl: resolvedVideoUrl,
           visibility: video.visibility,
           status: video.status,
         },
+      }, {
+        headers: {
+          'Cache-Control': 'private, max-age=60'
+        }
       })
     }
 
