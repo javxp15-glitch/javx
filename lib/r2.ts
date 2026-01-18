@@ -31,7 +31,7 @@ function normalizeEndpoint(endpoint: string, bucketName: string): string {
   }
 }
 
-function getR2Config(): R2Config {
+export function getR2Config(): R2Config {
   if (cachedConfig) return cachedConfig
 
   const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_DOMAIN } = process.env
@@ -57,7 +57,7 @@ function getR2Config(): R2Config {
   return cachedConfig
 }
 
-function getR2Client(config: R2Config): S3Client {
+export function getR2Client(config: R2Config): S3Client {
   if (cachedClient) return cachedClient
   cachedClient = new S3Client({
     region: "auto",
@@ -119,7 +119,7 @@ export function getPublicR2Url(key: string): string {
 export function normalizeR2Url(url: string | null): string | null {
   if (!url) return url
   const normalized = url.replace(/(^|\/)source\//, "$1media-storage/")
-  
+
   // Try to extract key from any R2 URL and convert to public domain URL
   const key = extractR2KeyFromUrl(normalized)
   if (key) {
@@ -129,7 +129,7 @@ export function normalizeR2Url(url: string | null): string | null {
       // Fall through to original URL handling
     }
   }
-  
+
   // If not an absolute URL, treat as key path
   if (!/^https?:\/\//i.test(normalized) && !normalized.startsWith("//")) {
     const trimmed = normalized.replace(/^\/+/, "")
@@ -139,7 +139,7 @@ export function normalizeR2Url(url: string | null): string | null {
       return normalized
     }
   }
-  
+
   return normalized
 }
 
@@ -148,24 +148,24 @@ export function normalizeR2Url(url: string | null): string | null {
  */
 function extractR2KeyFromUrl(url: string): string | null {
   if (!url) return null
-  
+
   // Check if URL contains R2 storage hostname patterns
   const r2Patterns = [
     /r2\.cloudflarestorage\.com/i,
     /r2\.dev/i,
   ]
-  
+
   const isR2Url = r2Patterns.some(pattern => pattern.test(url))
   if (!isR2Url) return null
-  
+
   // Remove query string (for signed URLs)
   const withoutQuery = url.split("?")[0]?.split("#")[0] ?? ""
-  
+
   try {
     const parsed = new URL(withoutQuery.startsWith("//") ? `https:${withoutQuery}` : withoutQuery)
     const path = parsed.pathname.replace(/^\/+/, "")
     if (!path) return null
-    
+
     // Remove bucket name prefix if present
     try {
       const config = getR2Config()
@@ -176,7 +176,7 @@ function extractR2KeyFromUrl(url: string): string | null {
     } catch {
       // Ignore config errors
     }
-    
+
     return path
   } catch {
     return null

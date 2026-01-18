@@ -154,7 +154,15 @@ export function VideoEmbed({ videoId }: VideoEmbedProps) {
   return (
     <div className="w-full h-screen">
       <div ref={containerRef} className="relative h-full w-full bg-black">
-        <video ref={videoRef} autoPlay className="h-full w-full bg-black object-contain" title={video.title}>
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          loop
+          className="h-full w-full bg-black object-contain"
+          title={video.title}
+        >
           {!isTsVideo && <source src={video.videoUrl} type={videoType} />}
           Your browser does not support the video tag.
         </video>

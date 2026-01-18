@@ -39,12 +39,19 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     // For PUBLIC videos, allow access from anywhere
     if (video.visibility === "PUBLIC") {
       // Use public URL for better performance (no signed URL generation)
-      const resolvedVideoUrl = normalizeR2Url(video.videoUrl) ?? video.videoUrl
+      // BUT usage of Proxy to ensure mobile compatibility
+      // const resolvedVideoUrl = normalizeR2Url(video.videoUrl) ?? video.videoUrl
+
+      // AUTO-PROXY: Use local proxy to stream video
+      // This solves both CORS and ISP blocking issues on mobile
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://jav-66.com"
+      const proxyUrl = `${appUrl}/api/proxy/video/${video.id}`
+
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: resolvedVideoUrl,
+          videoUrl: proxyUrl, // Force Proxy URL
           visibility: video.visibility,
           status: video.status,
         },
