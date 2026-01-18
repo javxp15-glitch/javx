@@ -70,7 +70,7 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password" classname="text-zinc-400">Password</Label>
+        <Label htmlFor="password" className="text-zinc-400">Password</Label>
         <Input
           id="password"
           type="password"

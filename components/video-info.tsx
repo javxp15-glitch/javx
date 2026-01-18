@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,32 +15,58 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Eye, Calendar, User, Edit, Trash2, Shield, Share2, MoreHorizontal } from "lucide-react"
+import {
+  Eye,
+  Clock,
+  HardDrive,
+  Edit,
+  Trash2,
+  Copy,
+  User,
+  Tag,
+  Folder,
+  Globe,
+  Lock,
+  Loader2,
+  Check,
+} from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
-import { EmbedCodeDialog } from "@/components/embed-code-dialog"
 import { toast } from "sonner"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { formatDuration, formatFileSize, formatNumber } from "@/lib/utils"
 
 interface CategoryRelation {
-  category: { id: string; name: string }
+  category: { id: string; name: string; slug: string }
+}
+
+interface PornstarRelation {
+  pornstar: { id: string; name: string; nameJp: string | null; slug: string; avatar: string | null }
+}
+
+interface TagRelation {
+  tag: { id: string; name: string; slug: string }
+}
+
+interface DomainRelation {
+  domain: { id: string; domain: string }
 }
 
 interface Video {
   id: string
   title: string
+  slug: string
   description: string | null
+  duration: number | null
+  fileSize: number | null
+  mimeType: string | null
   views: number
   visibility: string
   status: string
   createdAt: string
   categories: CategoryRelation[]
+  pornstars: PornstarRelation[]
+  tags: TagRelation[]
+  allowedDomains: DomainRelation[]
   createdBy: { name: string | null; email: string }
 }
 
@@ -55,6 +79,7 @@ export function VideoInfo({ videoId }: VideoInfoProps) {
   const [video, setVideo] = useState<Video | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     async function fetchVideo() {
@@ -98,137 +123,232 @@ export function VideoInfo({ videoId }: VideoInfoProps) {
     }
   }
 
+  const copyEmbedCode = () => {
+    const embedCode = `<iframe src="${window.location.origin}/embed/${videoId}" width="100%" height="480" frameborder="0" allowfullscreen></iframe>`
+    navigator.clipboard.writeText(embedCode)
+    setCopied(true)
+    toast.success("Embed code copied!")
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 w-3/4 bg-white/5 rounded" />
-        <div className="h-4 w-1/2 bg-white/5 rounded" />
-        <div className="h-20 w-full bg-white/5 rounded" />
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   if (!video) {
-    return <div className="text-muted-foreground p-4">Video not found</div>
+    return <div className="text-muted-foreground p-4 text-center">Video not found</div>
   }
 
-  const initials = video.createdBy.name
-    ? video.createdBy.name.substring(0, 2).toUpperCase()
-    : video.createdBy.email.substring(0, 2).toUpperCase()
+  const visibilityConfig = {
+    PUBLIC: { icon: Globe, label: "Public", color: "text-blue-400" },
+    PRIVATE: { icon: Lock, label: "Private", color: "text-gray-400" },
+    DOMAIN_RESTRICTED: { icon: Globe, label: "Domain Only", color: "text-purple-400" },
+  }
+
+  const VisibilityIcon = visibilityConfig[video.visibility as keyof typeof visibilityConfig]?.icon || Globe
+  const visibilityLabel = visibilityConfig[video.visibility as keyof typeof visibilityConfig]?.label || video.visibility
+  const visibilityColor = visibilityConfig[video.visibility as keyof typeof visibilityConfig]?.color || "text-gray-400"
 
   return (
     <div className="space-y-6">
-      {/* Title & Actions Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-white leading-tight">{video.title}</h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{video.views} views</span>
-            <span className="w-1 h-1 rounded-full bg-white/20" />
-            <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</span>
-          </div>
-        </div>
+      {/* Title */}
+      <h1 className="text-xl font-bold text-white leading-tight">{video.title}</h1>
 
-        {/* Actions Dropdown for Mobile / Clean layout */}
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-full bg-white/10 hover:bg-white/20 text-white border-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-black/90 border-white/10 text-white backdrop-blur-xl">
-              <DropdownMenuItem asChild>
-                <Link href={`/videos/${videoId}/edit`} className="cursor-pointer">
-                  <Edit className="h-4 w-4 mr-2" /> Edit Video
-                </Link>
-              </DropdownMenuItem>
-              <EmbedCodeDialog videoId={videoId} videoTitle={video.title} />
-              <DropdownMenuItem onClick={() => { }} className="text-red-400 focus:text-red-400 focus:bg-red-900/20 cursor-pointer">
-                <div className="flex w-full items-center" onClick={(e) => {
-                  e.preventDefault();
-                  // Trigger alert dialog? For now complex nested dialogs in dropdowns are tricky.
-                  // Simplified: Only show delete in dropdown if not using the separate alert flow or adapt UI.
-                  // For this iteration, I'll keep the Delete button distinct outside or rely on the actions below.
-                }}>
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/* Quick Stats */}
+      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <Eye className="h-4 w-4" />
+          <span>{formatNumber(video.views)} views</span>
+        </div>
+        {video.duration && (
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-4 w-4" />
+            <span>{formatDuration(video.duration)}</span>
+          </div>
+        )}
+        {video.fileSize && (
+          <div className="flex items-center gap-1.5">
+            <HardDrive className="h-4 w-4" />
+            <span>{formatFileSize(video.fileSize)}</span>
+          </div>
+        )}
+        <div className={`flex items-center gap-1.5 ${visibilityColor}`}>
+          <VisibilityIcon className="h-4 w-4" />
+          <span>{visibilityLabel}</span>
         </div>
       </div>
 
-      <Separator className="bg-white/10" />
-
-      {/* Author & Description */}
-      <div className="bg-white/5 rounded-2xl p-6 border border-white/5 backdrop-blur-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border border-white/10">
-              <AvatarFallback className="bg-primary/20 text-primary">{initials}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-medium text-white text-sm">{video.createdBy.name || "Unknown User"}</h3>
-              <p className="text-xs text-muted-foreground">{video.createdBy.email}</p>
-            </div>
+      {/* Pornstars */}
+      {video.pornstars && video.pornstars.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wide">
+            <User className="h-3.5 w-3.5" />
+            <span>Pornstars</span>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {video.categories?.map((rel) => (
-              <Badge key={rel.category.id} variant="outline" className="border-primary/20 text-primary bg-primary/5">
+          <div className="flex flex-wrap gap-2">
+            {video.pornstars.map((rel) => (
+              <Link
+                key={rel.pornstar.id}
+                href={`/admin/pornstars/${rel.pornstar.id}`}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/20 transition-colors"
+              >
+                {rel.pornstar.avatar ? (
+                  <img
+                    src={rel.pornstar.avatar}
+                    alt={rel.pornstar.name}
+                    className="w-5 h-5 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-pink-500/30 flex items-center justify-center">
+                    <User className="h-3 w-3 text-pink-400" />
+                  </div>
+                )}
+                <span className="text-sm text-pink-400">{rel.pornstar.name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Categories */}
+      {video.categories && video.categories.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wide">
+            <Folder className="h-3.5 w-3.5" />
+            <span>Categories</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {video.categories.map((rel) => (
+              <Badge
+                key={rel.category.id}
+                variant="outline"
+                className="border-primary/30 text-primary bg-primary/5 hover:bg-primary/10"
+              >
                 {rel.category.name}
               </Badge>
             ))}
           </div>
         </div>
+      )}
 
-        <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-          {video.description || "No description provided."}
+      {/* Tags */}
+      {video.tags && video.tags.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wide">
+            <Tag className="h-3.5 w-3.5" />
+            <span>Tags</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {video.tags.map((rel) => (
+              <Badge
+                key={rel.tag.id}
+                variant="secondary"
+                className="bg-white/5 text-muted-foreground hover:bg-white/10 border-0"
+              >
+                #{rel.tag.name}
+              </Badge>
+            ))}
+          </div>
         </div>
+      )}
+
+      {/* Description */}
+      {video.description && (
+        <div className="space-y-2">
+          <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+            {video.description}
+          </p>
+        </div>
+      )}
+
+      {/* Upload Info */}
+      <div className="text-xs text-muted-foreground">
+        Uploaded by <span className="text-white">{video.createdBy.name || video.createdBy.email}</span>
+        {" "}{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
       </div>
 
-      {/* Metadata Pills */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-muted-foreground">
-          <Shield className="h-3 w-3" />
-          {video.visibility}
-        </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-muted-foreground">
-          <div className={`w-1.5 h-1.5 rounded-full ${video.status === 'READY' ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
-          {video.status}
-        </div>
-      </div>
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={copyEmbedCode}
+          className="bg-white/5 border-white/10 hover:bg-white/10"
+        >
+          {copied ? <Check className="h-4 w-4 mr-1.5" /> : <Copy className="h-4 w-4 mr-1.5" />}
+          {copied ? "Copied" : "Embed"}
+        </Button>
 
-      {/* Admin Actions Area */}
-      <div className="flex gap-3 pt-2">
-        <Button variant="outline" className="flex-1 bg-transparent border-white/10 hover:bg-white/5 text-white" asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="bg-white/5 border-white/10 hover:bg-white/10"
+        >
           <Link href={`/videos/${videoId}/edit`}>
-            <Edit className="h-4 w-4 mr-2" /> Edit Details
+            <Edit className="h-4 w-4 mr-1.5" />
+            Edit
           </Link>
         </Button>
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" className="flex-1 bg-destructive/20 hover:bg-destructive/30 text-destructive hover:text-red-400 border border-destructive/20" disabled={deleting}>
-              <Trash2 className="h-4 w-4 mr-2" /> Delete Video
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+              disabled={deleting}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Delete
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="bg-zinc-950 border-white/10 text-white">
+          <AlertDialogContent className="bg-zinc-950 border-white/10">
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete this video?</AlertDialogTitle>
+              <AlertDialogTitle className="text-white">Delete Video?</AlertDialogTitle>
               <AlertDialogDescription className="text-zinc-400">
-                This action cannot be undone. The video and its thumbnail will be removed permanently.
+                This action cannot be undone. The video and all associated files will be permanently deleted.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="bg-transparent text-white border-white/10 hover:bg-white/5">Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90">
+              <AlertDialogCancel className="bg-transparent text-white border-white/10 hover:bg-white/5">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
                 {deleting ? "Deleting..." : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div >
+
+      {/* Allowed Domains (if restricted) */}
+      {video.visibility === "DOMAIN_RESTRICTED" && video.allowedDomains && video.allowedDomains.length > 0 && (
+        <div className="pt-2 border-t border-white/5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+            <Globe className="h-3.5 w-3.5" />
+            <span>Allowed Domains</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {video.allowedDomains.map((rel) => (
+              <Badge
+                key={rel.domain.id}
+                variant="outline"
+                className="border-purple-500/30 text-purple-400 bg-purple-500/5"
+              >
+                {rel.domain.domain}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

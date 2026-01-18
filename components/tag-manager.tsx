@@ -32,84 +32,86 @@ import {
     MoreHorizontal,
     Pencil,
     Trash2,
-    FolderOpen,
+    Tag,
     Loader2,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react"
-import { formatNumber } from "@/lib/utils"
+import { formatNumber, generateSlug } from "@/lib/utils"
 import { toast } from "sonner"
 
-interface Category {
+interface TagData {
     id: string
     name: string
     slug: string
-    description: string | null
-    _count: {
-        videos: number
-    }
+    usage: number
+    videoCount: number
     createdAt: string
 }
 
-export function CategoryManager() {
-    const [categories, setCategories] = useState<Category[]>([])
+export function TagManager() {
+    const [tags, setTags] = useState<TagData[]>([])
     const [loading, setLoading] = useState(true)
+    const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 })
     const [searchQuery, setSearchQuery] = useState("")
 
     // Dialogs
     const [formOpen, setFormOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-    const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null)
+    const [editingTag, setEditingTag] = useState<TagData | null>(null)
+    const [tagToDelete, setTagToDelete] = useState<TagData | null>(null)
 
     // Form state
     const [formName, setFormName] = useState("")
     const [formSlug, setFormSlug] = useState("")
-    const [formDescription, setFormDescription] = useState("")
     const [formLoading, setFormLoading] = useState(false)
 
-    const generateSlug = (name: string) => {
-        return name
-            .toLowerCase()
-            .replace(/[^a-z0-9\u0E00-\u0E7F]+/g, "-")
-            .replace(/^-+|-+$/g, "")
-    }
-
-    const fetchCategories = async () => {
+    const fetchTags = async () => {
         setLoading(true)
         try {
-            const response = await fetch("/api/categories")
+            const params = new URLSearchParams()
+            params.set("page", pagination.page.toString())
+            params.set("limit", pagination.limit.toString())
+            params.set("sort", "usage")
+            if (searchQuery) params.set("search", searchQuery)
+
+            const response = await fetch(`/api/tags?${params}`)
             if (response.ok) {
                 const data = await response.json()
-                setCategories(data.categories)
+                setTags(data.tags)
+                setPagination(prev => ({
+                    ...prev,
+                    total: data.pagination.total,
+                    totalPages: data.pagination.totalPages
+                }))
             }
         } catch (error) {
-            console.error("Failed to fetch categories:", error)
+            console.error("Failed to fetch tags:", error)
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        fetchCategories()
-    }, [])
+        fetchTags()
+    }, [pagination.page])
 
-    const filteredCategories = categories.filter(cat =>
-        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cat.slug.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const handleSearch = () => {
+        setPagination(prev => ({ ...prev, page: 1 }))
+        fetchTags()
+    }
 
     const openAddDialog = () => {
-        setEditingCategory(null)
+        setEditingTag(null)
         setFormName("")
         setFormSlug("")
-        setFormDescription("")
         setFormOpen(true)
     }
 
-    const openEditDialog = (category: Category) => {
-        setEditingCategory(category)
-        setFormName(category.name)
-        setFormSlug(category.slug)
-        setFormDescription(category.description || "")
+    const openEditDialog = (tag: TagData) => {
+        setEditingTag(tag)
+        setFormName(tag.name)
+        setFormSlug(tag.slug)
         setFormOpen(true)
     }
 
@@ -119,13 +121,12 @@ export function CategoryManager() {
             const payload = {
                 name: formName,
                 slug: formSlug || generateSlug(formName),
-                description: formDescription || null,
             }
 
             const response = await fetch(
-                editingCategory ? `/api/categories/${editingCategory.id}` : "/api/categories",
+                editingTag ? `/api/tags/${editingTag.id}` : "/api/tags",
                 {
-                    method: editingCategory ? "PUT" : "POST",
+                    method: editingTag ? "PUT" : "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 }
@@ -136,32 +137,32 @@ export function CategoryManager() {
                 throw new Error(error.error)
             }
 
-            toast.success(editingCategory ? "อัพเดทหมวดหมู่แล้ว" : "เพิ่มหมวดหมู่แล้ว")
+            toast.success(editingTag ? "อัพเดทแท็กแล้ว" : "เพิ่มแท็กแล้ว")
             setFormOpen(false)
-            fetchCategories()
+            fetchTags()
         } catch (error) {
-            console.error("Failed to save category:", error)
+            console.error("Failed to save tag:", error)
             toast.error(error instanceof Error ? error.message : "ไม่สามารถบันทึกได้")
         } finally {
             setFormLoading(false)
         }
     }
 
-    const handleDeleteClick = (category: Category) => {
-        setCategoryToDelete(category)
+    const handleDeleteClick = (tag: TagData) => {
+        setTagToDelete(tag)
         setDeleteDialogOpen(true)
     }
 
     const confirmDelete = async () => {
-        if (!categoryToDelete) return
+        if (!tagToDelete) return
         try {
-            await fetch(`/api/categories/${categoryToDelete.id}`, { method: "DELETE" })
-            toast.success("ลบหมวดหมู่แล้ว")
+            await fetch(`/api/tags/${tagToDelete.id}`, { method: "DELETE" })
+            toast.success("ลบแท็กแล้ว")
             setDeleteDialogOpen(false)
-            setCategoryToDelete(null)
-            fetchCategories()
+            setTagToDelete(null)
+            fetchTags()
         } catch (error) {
-            console.error("Failed to delete category:", error)
+            console.error("Failed to delete tag:", error)
             toast.error("ไม่สามารถลบได้")
         }
     }
@@ -173,15 +174,16 @@ export function CategoryManager() {
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="ค้นหาหมวดหมู่..."
+                        placeholder="ค้นหาแท็ก..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                         className="pl-9 bg-white/5 border-white/10"
                     />
                 </div>
                 <Button onClick={openAddDialog}>
                     <Plus className="h-4 w-4 mr-2" />
-                    เพิ่มหมวดหมู่
+                    เพิ่มแท็ก
                 </Button>
             </div>
 
@@ -193,36 +195,40 @@ export function CategoryManager() {
                             <TableHead>ชื่อ</TableHead>
                             <TableHead>Slug</TableHead>
                             <TableHead className="w-24">วิดีโอ</TableHead>
+                            <TableHead className="w-32">วันที่สร้าง</TableHead>
                             <TableHead className="w-16"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-32">
+                                <TableCell colSpan={5} className="h-32">
                                     <div className="flex items-center justify-center">
                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ) : filteredCategories.length === 0 ? (
+                        ) : tags.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="h-32">
+                                <TableCell colSpan={5} className="h-32">
                                     <div className="flex flex-col items-center justify-center text-muted-foreground">
-                                        <FolderOpen className="h-8 w-8 mb-2" />
-                                        <p>ไม่พบหมวดหมู่</p>
+                                        <Tag className="h-8 w-8 mb-2" />
+                                        <p>ไม่พบแท็ก</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredCategories.map((category) => (
-                                <TableRow key={category.id} className="border-white/10 hover:bg-white/5">
-                                    <TableCell className="font-medium">{category.name}</TableCell>
-                                    <TableCell className="text-muted-foreground">{category.slug}</TableCell>
+                            tags.map((tag) => (
+                                <TableRow key={tag.id} className="border-white/10 hover:bg-white/5">
+                                    <TableCell className="font-medium">{tag.name}</TableCell>
+                                    <TableCell className="text-muted-foreground">{tag.slug}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary" className="bg-primary/20 text-primary">
-                                            {formatNumber(category._count.videos)}
+                                            {formatNumber(tag.videoCount)}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                        {new Date(tag.createdAt).toLocaleDateString("th-TH")}
                                     </TableCell>
                                     <TableCell>
                                         <DropdownMenu>
@@ -232,13 +238,13 @@ export function CategoryManager() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => openEditDialog(category)}>
+                                                <DropdownMenuItem onClick={() => openEditDialog(tag)}>
                                                     <Pencil className="h-4 w-4 mr-2" />
                                                     แก้ไข
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     className="text-red-400 focus:text-red-400"
-                                                    onClick={() => handleDeleteClick(category)}
+                                                    onClick={() => handleDeleteClick(tag)}
                                                 >
                                                     <Trash2 className="h-4 w-4 mr-2" />
                                                     ลบ
@@ -253,15 +259,49 @@ export function CategoryManager() {
                 </Table>
             </div>
 
-            {/* Add/Edit Dialog */}
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        แสดง {(pagination.page - 1) * pagination.limit + 1} ถึง{" "}
+                        {Math.min(pagination.page * pagination.limit, pagination.total)} จาก{" "}
+                        {pagination.total} แท็ก
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                            disabled={pagination.page <= 1}
+                            className="bg-white/5 border-white/10"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm">
+                            หน้า {pagination.page} จาก {pagination.totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                            disabled={pagination.page >= pagination.totalPages}
+                            className="bg-white/5 border-white/10"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Add/Edit Tag Dialog */}
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{editingCategory ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่"}</DialogTitle>
+                        <DialogTitle>{editingTag ? "แก้ไขแท็ก" : "เพิ่มแท็ก"}</DialogTitle>
                         <DialogDescription>
-                            {editingCategory
-                                ? "แก้ไขข้อมูลหมวดหมู่ด้านล่าง"
-                                : "กรอกข้อมูลหมวดหมู่ใหม่"
+                            {editingTag
+                                ? "แก้ไขข้อมูลแท็กด้านล่าง"
+                                : "กรอกข้อมูลแท็กใหม่"
                             }
                         </DialogDescription>
                     </DialogHeader>
@@ -269,11 +309,11 @@ export function CategoryManager() {
                         <div className="space-y-2">
                             <label className="text-sm font-medium">ชื่อ</label>
                             <Input
-                                placeholder="เช่น บันเทิง, กีฬา"
+                                placeholder="เช่น Creampie"
                                 value={formName}
                                 onChange={(e) => {
                                     setFormName(e.target.value)
-                                    if (!editingCategory) setFormSlug(generateSlug(e.target.value))
+                                    if (!editingTag) setFormSlug(generateSlug(e.target.value))
                                 }}
                                 className="bg-white/5 border-white/10"
                             />
@@ -287,15 +327,6 @@ export function CategoryManager() {
                                 className="bg-white/5 border-white/10"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">คำอธิบาย (ไม่บังคับ)</label>
-                            <Input
-                                placeholder="คำอธิบายสั้นๆ"
-                                value={formDescription}
-                                onChange={(e) => setFormDescription(e.target.value)}
-                                className="bg-white/5 border-white/10"
-                            />
-                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setFormOpen(false)}>
@@ -303,7 +334,7 @@ export function CategoryManager() {
                         </Button>
                         <Button onClick={handleSave} disabled={formLoading || !formName}>
                             {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            {editingCategory ? "บันทึก" : "เพิ่มหมวดหมู่"}
+                            {editingTag ? "บันทึก" : "เพิ่มแท็ก"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -313,10 +344,10 @@ export function CategoryManager() {
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>ลบหมวดหมู่</DialogTitle>
+                        <DialogTitle>ลบแท็ก</DialogTitle>
                         <DialogDescription>
-                            คุณแน่ใจหรือไม่ที่จะลบ "{categoryToDelete?.name}"?
-                            หมวดหมู่นี้จะถูกลบออกจากวิดีโอที่เกี่ยวข้องทั้งหมด
+                            คุณแน่ใจหรือไม่ที่จะลบ "{tagToDelete?.name}"?
+                            แท็กนี้จะถูกลบออกจากวิดีโอที่เกี่ยวข้องทั้งหมด
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

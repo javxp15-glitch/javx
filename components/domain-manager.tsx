@@ -1,14 +1,39 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, Globe } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Trash2,
+  Globe,
+  Loader2,
+} from "lucide-react"
 import { toast } from "sonner"
 
 interface Domain {
@@ -20,14 +45,20 @@ interface Domain {
 
 export function DomainManager() {
   const [domains, setDomains] = useState<Domain[]>([])
-  const [newDomain, setNewDomain] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  useEffect(() => {
-    fetchDomains()
-  }, [])
+  // Dialogs
+  const [formOpen, setFormOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [domainToDelete, setDomainToDelete] = useState<Domain | null>(null)
+
+  // Form state
+  const [formDomain, setFormDomain] = useState("")
+  const [formLoading, setFormLoading] = useState(false)
 
   const fetchDomains = async () => {
+    setLoading(true)
     try {
       const response = await fetch("/api/domains")
       if (response.ok) {
@@ -36,103 +67,210 @@ export function DomainManager() {
       }
     } catch (error) {
       console.error("Failed to fetch domains:", error)
-    }
-  }
-
-  const handleAddDomain = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newDomain) return
-
-    setLoading(true)
-    try {
-      const response = await fetch("/api/domains", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: newDomain }),
-      })
-
-      if (response.ok) {
-        toast.success("Domain added successfully")
-        setNewDomain("")
-        fetchDomains()
-      } else {
-        const data = await response.json()
-        toast.error(data.error || "Failed to add domain")
-      }
-    } catch (error) {
-      toast.error("An error occurred")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDeleteDomain = async (domainId: string) => {
-    if (!confirm("Are you sure you want to remove this domain?")) return
+  useEffect(() => {
+    fetchDomains()
+  }, [])
 
+  const filteredDomains = domains.filter(d =>
+    d.domain.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const openAddDialog = () => {
+    setFormDomain("")
+    setFormOpen(true)
+  }
+
+  const handleSave = async () => {
+    setFormLoading(true)
     try {
-      const response = await fetch(`/api/domains/${domainId}`, {
-        method: "DELETE",
+      const response = await fetch("/api/domains", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: formDomain }),
       })
 
-      if (response.ok) {
-        toast.success("Domain removed successfully")
-        fetchDomains()
-      } else {
-        toast.error("Failed to remove domain")
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error)
       }
+
+      toast.success("เพิ่มโดเมนแล้ว")
+      setFormOpen(false)
+      fetchDomains()
     } catch (error) {
-      toast.error("An error occurred")
+      console.error("Failed to save domain:", error)
+      toast.error(error instanceof Error ? error.message : "ไม่สามารถบันทึกได้")
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
+  const handleDeleteClick = (domain: Domain) => {
+    setDomainToDelete(domain)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!domainToDelete) return
+    try {
+      await fetch(`/api/domains/${domainToDelete.id}`, { method: "DELETE" })
+      toast.success("ลบโดเมนแล้ว")
+      setDeleteDialogOpen(false)
+      setDomainToDelete(null)
+      fetchDomains()
+    } catch (error) {
+      console.error("Failed to delete domain:", error)
+      toast.error("ไม่สามารถลบได้")
     }
   }
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleAddDomain} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="domain">Add New Domain</Label>
-          <div className="flex gap-2">
-            <Input
-              id="domain"
-              placeholder="example.com or https://example.com"
-              value={newDomain}
-              onChange={(e) => setNewDomain(e.target.value)}
-            />
-            <Button type="submit" disabled={loading}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Enter a domain name or URL. Videos with domain restrictions can only be embedded on these domains.
-          </p>
+      {/* Header Actions */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="ค้นหาโดเมน..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 bg-white/5 border-white/10"
+          />
         </div>
-      </form>
-
-      <div className="space-y-2">
-        <Label>Allowed Domains ({domains.length})</Label>
-        {domains.length === 0 ? (
-          <Card>
-            <CardContent className="py-6 text-center text-muted-foreground">No domains added yet</CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {domains.map((domain) => (
-              <Card key={domain.id}>
-                <CardContent className="py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{domain.domain}</span>
-                    {domain.isActive && <Badge variant="secondary">Active</Badge>}
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteDomain(domain.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <Button onClick={openAddDialog}>
+          <Plus className="h-4 w-4 mr-2" />
+          เพิ่มโดเมน
+        </Button>
       </div>
+
+      {/* Table */}
+      <div className="rounded-lg border border-white/10 bg-white/5 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-white/10 hover:bg-white/5">
+              <TableHead>โดเมน</TableHead>
+              <TableHead className="w-24">สถานะ</TableHead>
+              <TableHead className="w-32">วันที่เพิ่ม</TableHead>
+              <TableHead className="w-16"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-32">
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredDomains.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-32">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <Globe className="h-8 w-8 mb-2" />
+                    <p>ไม่มีโดเมน</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredDomains.map((domain) => (
+                <TableRow key={domain.id} className="border-white/10 hover:bg-white/5">
+                  <TableCell className="font-medium">{domain.domain}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="secondary"
+                      className={domain.isActive
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-gray-500/20 text-gray-400"
+                      }
+                    >
+                      {domain.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {new Date(domain.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-red-400 focus:text-red-400"
+                          onClick={() => handleDeleteClick(domain)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          ลบ
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Add Domain Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>เพิ่มโดเมน</DialogTitle>
+            <DialogDescription>
+              กรอกโดเมนที่อนุญาตให้ฝังวิดีโอที่มีการจำกัดโดเมน
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">โดเมน</label>
+              <Input
+                placeholder="example.com หรือ https://example.com"
+                value={formDomain}
+                onChange={(e) => setFormDomain(e.target.value)}
+                className="bg-white/5 border-white/10"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setFormOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handleSave} disabled={formLoading || !formDomain}>
+              {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              เพิ่มโดเมน
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ลบโดเมน</DialogTitle>
+            <DialogDescription>
+              คุณแน่ใจหรือไม่ที่จะลบ "{domainToDelete?.domain}"?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              ลบ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

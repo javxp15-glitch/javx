@@ -1,7 +1,5 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CategoryManager } from "@/components/category-manager"
-import { DomainManager } from "@/components/domain-manager"
-import { FolderOpen, Globe, Settings, Shield } from "lucide-react"
+import Link from "next/link"
+import { FolderOpen, Globe, Shield, User, Tag } from "lucide-react"
 
 export const metadata = {
     title: "การตั้งค่าแอดมิน - Media Storage",
@@ -28,56 +26,54 @@ export default function AdminPage() {
                             <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
                                 การตั้งค่าแอดมิน
                             </h1>
-                            <p className="text-muted-foreground">จัดการหมวดหมู่วิดีโอและโดเมนที่อนุญาต</p>
+                            <p className="text-muted-foreground">จัดการข้อมูลทั้งหมดในระบบ</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <Tabs defaultValue="categories" className="space-y-8">
-                    <TabsList className="bg-white/5 border border-white/10 p-1 rounded-xl">
-                        <TabsTrigger
-                            value="categories"
-                            className="flex items-center gap-2 data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg px-6 py-2.5"
-                        >
-                            <FolderOpen className="h-4 w-4" />
-                            หมวดหมู่
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="domains"
-                            className="flex items-center gap-2 data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg px-6 py-2.5"
-                        >
-                            <Globe className="h-4 w-4" />
-                            โดเมน
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="categories">
-                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8">
-                            <div className="mb-6">
-                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                                    <FolderOpen className="h-5 w-5 text-primary" />
-                                    จัดการหมวดหมู่
-                                </h2>
-                                <p className="text-muted-foreground text-sm mt-1">สร้าง แก้ไข และลบหมวดหมู่สำหรับจัดระเบียบวิดีโอ</p>
-                            </div>
-                            <CategoryManager />
+                {/* Quick Links Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Link
+                        href="/admin/categories"
+                        className="flex flex-col items-center gap-3 p-6 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors group"
+                    >
+                        <FolderOpen className="h-8 w-8 text-emerald-400" />
+                        <div className="text-center">
+                            <p className="font-medium text-white group-hover:text-emerald-400 transition-colors">หมวดหมู่</p>
+                            <p className="text-xs text-muted-foreground">Categories</p>
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="domains">
-                        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8">
-                            <div className="mb-6">
-                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                                    <Globe className="h-5 w-5 text-primary" />
-                                    จัดการโดเมน
-                                </h2>
-                                <p className="text-muted-foreground text-sm mt-1">โดเมนที่อนุญาตให้ฝังวิดีโอที่มีการจำกัดโดเมนได้</p>
-                            </div>
-                            <DomainManager />
+                    </Link>
+                    <Link
+                        href="/admin/domains"
+                        className="flex flex-col items-center gap-3 p-6 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-colors group"
+                    >
+                        <Globe className="h-8 w-8 text-purple-400" />
+                        <div className="text-center">
+                            <p className="font-medium text-white group-hover:text-purple-400 transition-colors">โดเมน</p>
+                            <p className="text-xs text-muted-foreground">Domains</p>
                         </div>
-                    </TabsContent>
-                </Tabs>
+                    </Link>
+                    <Link
+                        href="/admin/pornstars"
+                        className="flex flex-col items-center gap-3 p-6 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/20 transition-colors group"
+                    >
+                        <User className="h-8 w-8 text-pink-400" />
+                        <div className="text-center">
+                            <p className="font-medium text-white group-hover:text-pink-400 transition-colors">นักแสดง</p>
+                            <p className="text-xs text-muted-foreground">Pornstars</p>
+                        </div>
+                    </Link>
+                    <Link
+                        href="/admin/tags"
+                        className="flex flex-col items-center gap-3 p-6 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition-colors group"
+                    >
+                        <Tag className="h-8 w-8 text-blue-400" />
+                        <div className="text-center">
+                            <p className="font-medium text-white group-hover:text-blue-400 transition-colors">แท็ก</p>
+                            <p className="text-xs text-muted-foreground">Tags</p>
+                        </div>
+                    </Link>
+                </div>
             </div>
         </div>
     )

@@ -167,9 +167,9 @@ export function Navigation() {
                   scrolled ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm"
                 )}
               >
-                <Link href="/videos/upload">
-                  <UploadCloud className="mr-2 h-4 w-4" />
-                  Upload
+                <Link href="/videos">
+                  <Video className="mr-2 h-4 w-4" />
+                  Video
                 </Link>
               </Button>
             )}
@@ -197,22 +197,16 @@ export function Navigation() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-white/10" />
                   <DropdownMenuItem asChild className="rounded-lg focus:bg-white/10">
-                    <Link href="/videos" className="cursor-pointer">
-                      <Video className="mr-2 h-4 w-4 text-primary" />
-                      My Videos
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="rounded-lg focus:bg-white/10">
                     <Link href="/settings" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Settings
+                      Account
                     </Link>
                   </DropdownMenuItem>
                   {user.role === "ADMIN" && (
                     <DropdownMenuItem asChild className="rounded-lg focus:bg-white/10">
                       <Link href="/admin" className="cursor-pointer">
                         <Globe className="mr-2 h-4 w-4 text-accent" />
-                        Admin Settings
+                        Setting
                       </Link>
                     </DropdownMenuItem>
                   )}

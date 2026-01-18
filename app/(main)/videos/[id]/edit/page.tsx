@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { MultiCategorySelector } from "@/components/multi-category-selector"
+import { MultiPornstarSelector } from "@/components/multi-pornstar-selector"
+import { MultiTagSelector } from "@/components/multi-tag-selector"
 
 interface Domain {
     id: string
@@ -33,6 +35,20 @@ interface CategoryRelation {
     }
 }
 
+interface PornstarRelation {
+    pornstar: {
+        id: string
+        name: string
+    }
+}
+
+interface TagRelation {
+    tag: {
+        id: string
+        name: string
+    }
+}
+
 interface Video {
     id: string
     title: string
@@ -45,6 +61,8 @@ interface Video {
     fileSize: number | null
     mimeType: string | null
     categories: CategoryRelation[]
+    pornstars: PornstarRelation[]
+    tags: TagRelation[]
     allowedDomains: AllowedDomainRelation[]
     createdBy: { id: string; name: string | null; email: string }
 }
@@ -63,6 +81,8 @@ export default function EditVideoPage({ params }: EditVideoPageProps) {
     const [title, setTitle] = useState("")
     const [description, setDescription] = useState("")
     const [categoryIds, setCategoryIds] = useState<string[]>([])
+    const [pornstarIds, setPornstarIds] = useState<string[]>([])
+    const [tagIds, setTagIds] = useState<string[]>([])
     const [visibility, setVisibility] = useState<Visibility>("PUBLIC")
     const [allowedDomainIds, setAllowedDomainIds] = useState<string[]>([])
     const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
@@ -88,6 +108,8 @@ export default function EditVideoPage({ params }: EditVideoPageProps) {
                     setTitle(v.title)
                     setDescription(v.description || "")
                     setCategoryIds(v.categories?.map((c) => c.category.id) || [])
+                    setPornstarIds(v.pornstars?.map((p) => p.pornstar.id) || [])
+                    setTagIds(v.tags?.map((t) => t.tag.id) || [])
                     setVisibility(v.visibility)
                     setAllowedDomainIds(v.allowedDomains?.map((d) => d.domain.id) || [])
                 } else {
@@ -172,6 +194,8 @@ export default function EditVideoPage({ params }: EditVideoPageProps) {
                     title: title.trim(),
                     description: description.trim() || null,
                     categoryIds: categoryIds,
+                    pornstarIds: pornstarIds,
+                    tagIds: tagIds,
                     visibility,
                     allowedDomainIds: visibility === "DOMAIN_RESTRICTED" ? allowedDomainIds : undefined,
                 }),
@@ -259,6 +283,16 @@ export default function EditVideoPage({ params }: EditVideoPageProps) {
                             <div className="space-y-2">
                                 <Label className="text-gray-300">หมวดหมู่</Label>
                                 <MultiCategorySelector value={categoryIds} onValueChange={setCategoryIds} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-gray-300">Pornstars</Label>
+                                <MultiPornstarSelector value={pornstarIds} onValueChange={setPornstarIds} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-gray-300">Tags</Label>
+                                <MultiTagSelector value={tagIds} onValueChange={setTagIds} />
                             </div>
 
                             <div className="space-y-2">

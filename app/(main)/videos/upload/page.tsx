@@ -14,6 +14,8 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { MultiCategorySelector } from "@/components/multi-category-selector"
+import { MultiPornstarSelector } from "@/components/multi-pornstar-selector"
+import { MultiTagSelector } from "@/components/multi-tag-selector"
 
 interface Category {
   id: string
@@ -33,6 +35,8 @@ export default function UploadVideoPage() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [categoryIds, setCategoryIds] = useState<string[]>([])
+  const [pornstarIds, setPornstarIds] = useState<string[]>([])
+  const [tagIds, setTagIds] = useState<string[]>([])
   const [visibility, setVisibility] = useState<Visibility>("PUBLIC")
   const [allowedDomainIds, setAllowedDomainIds] = useState<string[]>([])
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -42,6 +46,23 @@ export default function UploadVideoPage() {
   const [uploadStatus, setUploadStatus] = useState("")
   const [uploadProgress, setUploadProgress] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [videoDuration, setVideoDuration] = useState<number | null>(null)
+
+  // Extract video duration when file is selected
+  const handleVideoFileChange = (file: File | null) => {
+    setVideoFile(file)
+    setVideoDuration(null)
+
+    if (file) {
+      const video = document.createElement("video")
+      video.preload = "metadata"
+      video.onloadedmetadata = () => {
+        setVideoDuration(Math.round(video.duration))
+        URL.revokeObjectURL(video.src)
+      }
+      video.src = URL.createObjectURL(file)
+    }
+  }
 
   useEffect(() => {
     if (visibility !== "DOMAIN_RESTRICTED") {
@@ -221,6 +242,8 @@ export default function UploadVideoPage() {
           title: title.trim(),
           description: description.trim() || undefined,
           categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
+          pornstarIds: pornstarIds.length > 0 ? pornstarIds : undefined,
+          tagIds: tagIds.length > 0 ? tagIds : undefined,
           visibility,
           allowedDomainIds: visibility === "DOMAIN_RESTRICTED" ? allowedDomainIds : undefined,
           videoKey: videoUpload.key,
@@ -228,6 +251,7 @@ export default function UploadVideoPage() {
           thumbnailUrl: thumbnailKey,
           fileSize: videoUpload.size,
           mimeType: videoUpload.type,
+          duration: videoDuration,
         }),
       })
 
@@ -321,6 +345,18 @@ export default function UploadVideoPage() {
                 </div>
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-gray-300">Pornstars</Label>
+                  <MultiPornstarSelector value={pornstarIds} onValueChange={setPornstarIds} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-gray-300">Tags</Label>
+                  <MultiTagSelector value={tagIds} onValueChange={setTagIds} />
+                </div>
+              </div>
+
               {visibility === "DOMAIN_RESTRICTED" && (
                 <div className="space-y-2">
                   <Label>Domains ที่อนุญาต</Label>
@@ -369,7 +405,7 @@ export default function UploadVideoPage() {
                     type="file"
                     className="hidden"
                     accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
-                    onChange={(event) => setVideoFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) => handleVideoFileChange(event.target.files?.[0] ?? null)}
                   />
                 </label>
                 {errors.videoFile && <p className="text-sm text-destructive">{errors.videoFile}</p>}
