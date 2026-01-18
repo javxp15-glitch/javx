@@ -119,14 +119,67 @@ export function getPublicR2Url(key: string): string {
 export function normalizeR2Url(url: string | null): string | null {
   if (!url) return url
   const normalized = url.replace(/(^|\/)source\//, "$1media-storage/")
-  if (/^https?:\/\//i.test(normalized) || normalized.startsWith("//")) {
-    return normalized
+  
+  // Try to extract key from any R2 URL and convert to public domain URL
+  const key = extractR2KeyFromUrl(normalized)
+  if (key) {
+    try {
+      return getPublicR2Url(key)
+    } catch {
+      // Fall through to original URL handling
+    }
   }
-  const trimmed = normalized.replace(/^\/+/, "")
+  
+  // If not an absolute URL, treat as key path
+  if (!/^https?:\/\//i.test(normalized) && !normalized.startsWith("//")) {
+    const trimmed = normalized.replace(/^\/+/, "")
+    try {
+      return getPublicR2Url(trimmed)
+    } catch {
+      return normalized
+    }
+  }
+  
+  return normalized
+}
+
+/**
+ * Extract R2 key from any R2 URL format (signed or direct)
+ */
+function extractR2KeyFromUrl(url: string): string | null {
+  if (!url) return null
+  
+  // Check if URL contains R2 storage hostname patterns
+  const r2Patterns = [
+    /r2\.cloudflarestorage\.com/i,
+    /r2\.dev/i,
+  ]
+  
+  const isR2Url = r2Patterns.some(pattern => pattern.test(url))
+  if (!isR2Url) return null
+  
+  // Remove query string (for signed URLs)
+  const withoutQuery = url.split("?")[0]?.split("#")[0] ?? ""
+  
   try {
-    return getPublicR2Url(trimmed)
+    const parsed = new URL(withoutQuery.startsWith("//") ? `https:${withoutQuery}` : withoutQuery)
+    const path = parsed.pathname.replace(/^\/+/, "")
+    if (!path) return null
+    
+    // Remove bucket name prefix if present
+    try {
+      const config = getR2Config()
+      const bucketPrefix = `${config.bucketName}/`
+      if (path.startsWith(bucketPrefix)) {
+        return path.slice(bucketPrefix.length)
+      }
+    } catch {
+      // Ignore config errors
+    }
+    
+    return path
   } catch {
-    return normalized
+    return null
   }
 }
 
