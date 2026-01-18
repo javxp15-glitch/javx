@@ -207,6 +207,11 @@ export async function GET(request: NextRequest) {
       where.visibility = validatedQuery.visibility
     }
 
+    // Filter by allowed domain
+    if (validatedQuery.domainId) {
+      where.allowedDomains = { some: { domainId: validatedQuery.domainId } }
+    }
+
     // Non-admin users can only see public videos and their own
     if (user.role !== "ADMIN") {
       where.OR = [{ visibility: "PUBLIC" }, { createdById: user.userId }]

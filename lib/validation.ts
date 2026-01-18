@@ -32,6 +32,7 @@ export const videoQuerySchema = z.object({
   categoryId: z.string().optional(),
   pornstarId: z.string().optional(),
   tagId: z.string().optional(),
+  domainId: z.string().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "DOMAIN_RESTRICTED"]).optional(),
   sort: z.enum(["newest", "oldest", "popular"]).default("newest"),
   since: z.string().optional(),

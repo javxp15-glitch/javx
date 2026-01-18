@@ -54,10 +54,31 @@ import {
     Loader2,
     Globe,
     Settings,
+    Tag as TagIcon,
+    Folder,
+    User,
+    Check
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { formatDuration, formatNumber } from "@/lib/utils"
+import { MultiCategorySelector } from "@/components/multi-category-selector"
+import { MultiPornstarSelector } from "@/components/multi-pornstar-selector"
+import { MultiTagSelector } from "@/components/multi-tag-selector"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface Category {
     category: { id: string; name: string }
@@ -111,6 +132,19 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
     const [searchQuery, setSearchQuery] = useState("")
     const [sortBy, setSortBy] = useState<"newest" | "oldest" | "popular">("newest")
     const [filterVisibility, setFilterVisibility] = useState<string>("all")
+    const [filterCategory, setFilterCategory] = useState<string>("all")
+    const [filterPornstar, setFilterPornstar] = useState<string>("all")
+    const [filterTag, setFilterTag] = useState<string>("all")
+    const [filterDomain, setFilterDomain] = useState<string>("all")
+
+    // Filter Data
+    const [categories, setCategories] = useState<{ id: string, name: string }[]>([])
+    const [pornstars, setPornstars] = useState<{ id: string, name: string }[]>([])
+    const [tags, setTags] = useState<{ id: string, name: string }[]>([])
+
+    // Filter Popover States
+    const [openPornstarFilter, setOpenPornstarFilter] = useState(false)
+    const [openTagFilter, setOpenTagFilter] = useState(false)
 
     // Dialog states
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -121,6 +155,9 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
     // Bulk edit form state
     const [bulkVisibility, setBulkVisibility] = useState<string>("")
     const [bulkDomainIds, setBulkDomainIds] = useState<string[]>([])
+    const [bulkCategoryIds, setBulkCategoryIds] = useState<string[]>([])
+    const [bulkPornstarIds, setBulkPornstarIds] = useState<string[]>([])
+    const [bulkTagIds, setBulkTagIds] = useState<string[]>([])
     const [domains, setDomains] = useState<Domain[]>([])
 
     const fetchVideos = async () => {
@@ -132,6 +169,10 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
             params.set("sort", sortBy)
             if (searchQuery) params.set("search", searchQuery)
             if (filterVisibility !== "all") params.set("visibility", filterVisibility)
+            if (filterCategory !== "all") params.set("categoryId", filterCategory)
+            if (filterPornstar !== "all") params.set("pornstarId", filterPornstar)
+            if (filterTag !== "all") params.set("tagId", filterTag)
+            if (filterDomain !== "all") params.set("domainId", filterDomain)
 
             const response = await fetch(`/api/videos?${params}`)
             if (response.ok) {
@@ -162,12 +203,38 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
         }
     }
 
+    const fetchFilterData = async () => {
+        try {
+            const [catRes, pornRes, tagRes] = await Promise.all([
+                fetch("/api/categories"),
+                fetch("/api/pornstars?limit=100&sort=name"),
+                fetch("/api/tags?limit=100&sort=name")
+            ])
+
+            if (catRes.ok) {
+                const data = await catRes.json()
+                setCategories(data.categories)
+            }
+            if (pornRes.ok) {
+                const data = await pornRes.json()
+                setPornstars(data.pornstars)
+            }
+            if (tagRes.ok) {
+                const data = await tagRes.json()
+                setTags(data.tags)
+            }
+        } catch (error) {
+            console.error("Failed to fetch filter data:", error)
+        }
+    }
+
     useEffect(() => {
         fetchVideos()
-    }, [pagination.page, sortBy, filterVisibility])
+    }, [pagination.page, sortBy, filterVisibility, filterCategory, filterPornstar, filterTag, filterDomain])
 
     useEffect(() => {
         fetchDomains()
+        fetchFilterData()
     }, [])
 
     const activeDomains = useMemo(() => domains.filter(d => d.isActive), [domains])
@@ -222,6 +289,9 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
     const openBulkEditDialog = () => {
         setBulkVisibility("")
         setBulkDomainIds([])
+        setBulkCategoryIds([])
+        setBulkPornstarIds([])
+        setBulkTagIds([])
         setBulkEditDialogOpen(true)
     }
 
@@ -234,8 +304,8 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
     }
 
     const handleBulkEdit = async () => {
-        if (!bulkVisibility) {
-            toast.error("กรุณาเลือกการเผยแพร่")
+        if (!bulkVisibility && bulkCategoryIds.length === 0 && bulkPornstarIds.length === 0 && bulkTagIds.length === 0) {
+            toast.error("กรุณาเลือกอย่างน้อย 1 รายการที่จะแก้ไข")
             return
         }
 
@@ -251,8 +321,11 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        visibility: bulkVisibility,
-                        allowedDomainIds: bulkVisibility === "DOMAIN_RESTRICTED" ? bulkDomainIds : [],
+                        visibility: bulkVisibility || undefined,
+                        allowedDomainIds: bulkVisibility === "DOMAIN_RESTRICTED" ? bulkDomainIds : undefined,
+                        categoryIds: bulkCategoryIds.length > 0 ? bulkCategoryIds : undefined,
+                        pornstarIds: bulkPornstarIds.length > 0 ? bulkPornstarIds : undefined,
+                        tagIds: bulkTagIds.length > 0 ? bulkTagIds : undefined,
                     }),
                 })
             )
@@ -335,6 +408,135 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
                             <SelectItem value="DOMAIN_RESTRICTED">Domain</SelectItem>
                         </SelectContent>
                     </Select>
+
+                    {/* Category Filter */}
+                    <Select value={filterCategory} onValueChange={setFilterCategory}>
+                        <SelectTrigger className="w-[140px] bg-white/5 border-white/10">
+                            <Folder className="h-4 w-4 mr-2" />
+                            <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            {categories.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    {/* Pornstar Filter (Combobox) */}
+                    <Popover open={openPornstarFilter} onOpenChange={setOpenPornstarFilter}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openPornstarFilter}
+                                className="w-[140px] justify-between bg-white/5 border-white/10 hover:bg-white/10"
+                            >
+                                <span className="truncate flex items-center">
+                                    <User className="h-4 w-4 mr-2 shrink-0" />
+                                    {filterPornstar === "all" ? "Pornstar" : pornstars.find(p => p.id === filterPornstar)?.name || "Pornstar"}
+                                </span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search pornstar..." />
+                                <CommandList>
+                                    <CommandEmpty>No pornstar found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="all"
+                                            onSelect={() => {
+                                                setFilterPornstar("all")
+                                                setOpenPornstarFilter(false)
+                                            }}
+                                        >
+                                            <Check className={cn("mr-2 h-4 w-4", filterPornstar === "all" ? "opacity-100" : "opacity-0")} />
+                                            All Pornstars
+                                        </CommandItem>
+                                        {pornstars.map((pornstar) => (
+                                            <CommandItem
+                                                key={pornstar.id}
+                                                value={pornstar.name}
+                                                onSelect={() => {
+                                                    setFilterPornstar(pornstar.id)
+                                                    setOpenPornstarFilter(false)
+                                                }}
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", filterPornstar === pornstar.id ? "opacity-100" : "opacity-0")} />
+                                                {pornstar.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+
+                    {/* Tag Filter (Combobox) */}
+                    <Popover open={openTagFilter} onOpenChange={setOpenTagFilter}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openTagFilter}
+                                className="w-[140px] justify-between bg-white/5 border-white/10 hover:bg-white/10"
+                            >
+                                <span className="truncate flex items-center">
+                                    <TagIcon className="h-4 w-4 mr-2 shrink-0" />
+                                    {filterTag === "all" ? "Tag" : tags.find(t => t.id === filterTag)?.name || "Tag"}
+                                </span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search tag..." />
+                                <CommandList>
+                                    <CommandEmpty>No tag found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="all"
+                                            onSelect={() => {
+                                                setFilterTag("all")
+                                                setOpenTagFilter(false)
+                                            }}
+                                        >
+                                            <Check className={cn("mr-2 h-4 w-4", filterTag === "all" ? "opacity-100" : "opacity-0")} />
+                                            All Tags
+                                        </CommandItem>
+                                        {tags.map((tag) => (
+                                            <CommandItem
+                                                key={tag.id}
+                                                value={tag.name}
+                                                onSelect={() => {
+                                                    setFilterTag(tag.id)
+                                                    setOpenTagFilter(false)
+                                                }}
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", filterTag === tag.id ? "opacity-100" : "opacity-0")} />
+                                                {tag.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+
+                    {/* Domain Filter */}
+                    <Select value={filterDomain} onValueChange={setFilterDomain}>
+                        <SelectTrigger className="w-[140px] bg-white/5 border-white/10">
+                            <Globe className="h-4 w-4 mr-2" />
+                            <SelectValue placeholder="Domain" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Domains</SelectItem>
+                            {activeDomains.map((d) => (
+                                <SelectItem key={d.id} value={d.id}>{d.domain}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
                     <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
                         <SelectTrigger className="w-[140px] bg-white/5 border-white/10">
                             <ArrowUpDown className="h-4 w-4 mr-2" />
@@ -399,6 +601,8 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
                             <TableHead className="w-24">Views</TableHead>
                             <TableHead className="w-24">Status</TableHead>
                             <TableHead className="w-24">Visibility</TableHead>
+                            <TableHead className="w-32">Categories</TableHead>
+                            <TableHead className="w-32">Tags</TableHead>
                             <TableHead className="w-32">Created</TableHead>
                             <TableHead className="w-16"></TableHead>
                         </TableRow>
@@ -488,6 +692,28 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
                                     </TableCell>
                                     <TableCell>{getStatusBadge(video.status)}</TableCell>
                                     <TableCell>{getVisibilityBadge(video.visibility)}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {video.categories?.map(c => (
+                                                <Badge key={c.category.id} variant="secondary" className="text-[10px] h-4 bg-emerald-500/20 text-emerald-400 border-0">
+                                                    {c.category.name}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {video.tags?.slice(0, 3).map(t => (
+                                                <Badge key={t.tag.id} variant="secondary" className="text-[10px] h-4 bg-blue-500/20 text-blue-400 border-0">
+                                                    #{t.tag.name}
+                                                </Badge>
+                                            ))}
+                                            {video.tags && video.tags.length > 3 && (
+                                                <span className="text-[10px] text-muted-foreground">+{video.tags.length - 3}</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
+
                                     <TableCell className="text-muted-foreground text-sm">
                                         {new Date(video.createdAt).toLocaleDateString()}
                                     </TableCell>
@@ -663,6 +889,22 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
                                 )}
                             </div>
                         )}
+
+
+                        <div className="space-y-2">
+                            <Label className="text-white">หมวดหมู่</Label>
+                            <MultiCategorySelector value={bulkCategoryIds} onValueChange={setBulkCategoryIds} />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-white">Pornstars</Label>
+                            <MultiPornstarSelector value={bulkPornstarIds} onValueChange={setBulkPornstarIds} />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-white">Tags</Label>
+                            <MultiTagSelector value={bulkTagIds} onValueChange={setBulkTagIds} />
+                        </div>
                     </div>
 
                     <DialogFooter>
@@ -676,6 +918,6 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     )
 }
