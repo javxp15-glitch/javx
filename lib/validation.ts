@@ -30,8 +30,11 @@ export const videoQuerySchema = z.object({
   per_page: z.coerce.number().optional(), // Alias for limit
   search: z.string().optional(),
   categoryId: z.string().optional(),
+  categorySlug: z.string().optional(),
   pornstarId: z.string().optional(),
+  pornstarSlug: z.string().optional(),
   tagId: z.string().optional(),
+  tagSlug: z.string().optional(),
   domainId: z.string().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE", "DOMAIN_RESTRICTED"]).optional(),
   sort: z.enum(["newest", "oldest", "popular"]).default("newest"),

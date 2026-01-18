@@ -18,6 +18,8 @@ const mapPluginVideo = (video: {
   categories?: { category: { name: string } }[]
   pornstars?: { pornstar: { name: string; slug: string } }[]
   tags?: { tag: { name: string; slug: string } }[]
+  createdBy: { name: string | null }
+  views: number
 }) => ({
   id: video.id,
   title: video.title,
@@ -32,6 +34,9 @@ const mapPluginVideo = (video: {
   tags: video.tags?.map((t) => t.tag.name) || [],
   created_at: video.createdAt,
   updated_at: video.updatedAt,
+  views: video.views,
+  uploader: video.createdBy.name ?? "System",
+  rating: "99%",
 })
 
 // GET - Get video by ID

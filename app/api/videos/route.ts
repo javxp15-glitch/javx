@@ -19,6 +19,8 @@ const mapPluginVideo = (video: {
   categories?: { category: { name: string } }[]
   pornstars?: { pornstar: { name: string; slug: string } }[]
   tags?: { tag: { name: string; slug: string } }[]
+  createdBy: { name: string | null }
+  views: number
 }) => ({
   id: video.id,
   title: video.title,
@@ -34,6 +36,9 @@ const mapPluginVideo = (video: {
   tags: video.tags?.map((t) => t.tag.name) || [],
   created_at: video.createdAt,
   updated_at: video.updatedAt,
+  views: video.views,
+  uploader: video.createdBy.name ?? "System",
+  rating: "99%", // Mock rating as it's not in DB yet
 })
 
 // POST - Create new video
@@ -190,16 +195,22 @@ export async function GET(request: NextRequest) {
     // Filter by category
     if (validatedQuery.categoryId) {
       where.categories = { some: { categoryId: validatedQuery.categoryId } }
+    } else if (validatedQuery.categorySlug) {
+      where.categories = { some: { category: { slug: validatedQuery.categorySlug } } }
     }
 
     // Filter by pornstar
     if (validatedQuery.pornstarId) {
       where.pornstars = { some: { pornstarId: validatedQuery.pornstarId } }
+    } else if (validatedQuery.pornstarSlug) {
+      where.pornstars = { some: { pornstar: { slug: validatedQuery.pornstarSlug } } }
     }
 
     // Filter by tag
     if (validatedQuery.tagId) {
       where.tags = { some: { tagId: validatedQuery.tagId } }
+    } else if (validatedQuery.tagSlug) {
+      where.tags = { some: { tag: { slug: validatedQuery.tagSlug } } }
     }
 
     // Filter by visibility
