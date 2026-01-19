@@ -30,7 +30,7 @@ export function VideoGrid() {
       setLoading(true)
       try {
         const params = new URLSearchParams(searchParams.toString())
-        const response = await fetch(`/api/videos?${params}`)
+        const response = await fetch(`/api/videos/feed?${params}`)
         if (response.ok) {
           const data = await response.json()
           setVideos(data.videos)

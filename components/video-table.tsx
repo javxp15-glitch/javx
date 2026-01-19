@@ -174,7 +174,7 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
             if (filterTag !== "all") params.set("tagId", filterTag)
             if (filterDomain !== "all") params.set("domainId", filterDomain)
 
-            const response = await fetch(`/api/videos?${params}`)
+            const response = await fetch(`/api/videos/feed?${params}`)
             if (response.ok) {
                 const data = await response.json()
                 setVideos(data.videos)

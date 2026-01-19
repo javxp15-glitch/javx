@@ -41,7 +41,7 @@ export default function VideoDetailPage({ params }: PageProps) {
       .catch(console.error)
 
     // Fetch all videos for navigation
-    fetch(`/api/videos?limit=100&sort=newest`)
+    fetch(`/api/videos/feed?limit=100&sort=newest`)
       .then(res => res.json())
       .then(data => {
         const videos = data.videos as VideoNavItem[]
