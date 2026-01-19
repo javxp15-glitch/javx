@@ -263,26 +263,61 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       })
     }
 
-    // Delete files from R2
-    try {
-      const videoKey = video.videoUrl.split("/").pop()
-      if (videoKey) await deleteFromR2(videoKey)
+    // 1. Delete video from Database (Primary Action)
+    // We do this first so the user sees immediate feedback that the video is gone from the main list (if not cached)
+    await prisma.video.delete({ where: { id: params.id } })
 
-      if (video.thumbnailUrl) {
-        const thumbnailKey = video.thumbnailUrl.split("/").pop()
-        if (thumbnailKey) await deleteFromR2(thumbnailKey)
-      }
+    // 2. Perform Secondary Tasks (R2 Delete & Revalidation) in Parallel
+    // specific tasks logic
+    const tasks: Promise<any>[] = []
 
-      if (video.previewUrl) {
-        const previewKey = video.previewUrl.split("/").pop()
-        if (previewKey) await deleteFromR2(previewKey)
-      }
-    } catch (error) {
-      console.error("Failed to delete files from R2:", error)
+    // R2 Deletion
+    const videoKey = video.videoUrl.split("/").pop()
+    if (videoKey) tasks.push(deleteFromR2(videoKey))
+
+    if (video.thumbnailUrl) {
+      const thumbnailKey = video.thumbnailUrl.split("/").pop()
+      if (thumbnailKey) tasks.push(deleteFromR2(thumbnailKey))
     }
 
-    // Delete video (cascade will handle relations)
-    await prisma.video.delete({ where: { id: params.id } })
+    if (video.previewUrl) {
+      const previewKey = video.previewUrl.split("/").pop()
+      if (previewKey) tasks.push(deleteFromR2(previewKey))
+    }
+
+    // Frontend Revalidation
+    const frontendUrl = process.env.FRONTEND_URL
+    const revalidationToken = process.env.REVALIDATION_TOKEN
+
+    if (frontendUrl && revalidationToken) {
+      // Revalidate main video list
+      tasks.push(
+        fetch(`${frontendUrl}/api/revalidate?tag=videos`, {
+          method: "POST",
+          headers: { "x-revalidation-token": revalidationToken },
+        })
+      )
+      // Revalidate specific video cache (just in case)
+      tasks.push(
+        fetch(`${frontendUrl}/api/revalidate?tag=video-${params.id}`, {
+          method: "POST",
+          headers: { "x-revalidation-token": revalidationToken },
+        })
+      )
+    } else {
+      console.warn("REVALIDATION SKIPPED: Missing FRONTEND_URL or REVALIDATION_TOKEN")
+    }
+
+    // Execute all background tasks concurrently
+    // We use allSettled so if one fails (e.g. R2 issue), others still run (e.g. Revalidate)
+    const results = await Promise.allSettled(tasks)
+
+    // Optional: Log failures for debugging
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(`Cleanup task ${index} failed:`, result.reason)
+      }
+    })
 
     return NextResponse.json({ message: "Video deleted successfully" })
   } catch (error) {
