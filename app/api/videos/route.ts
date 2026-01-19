@@ -250,14 +250,37 @@ export async function GET(request: NextRequest) {
         orderBy,
         skip,
         take,
-        include: {
-          categories: { include: { category: true } },
-          pornstars: { include: { pornstar: true } },
-          tags: { include: { tag: true } },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          description: true,
+          videoUrl: true,
+          thumbnailUrl: true,
+          duration: true,
+          createdAt: true,
+          updatedAt: true,
+          views: true,
+          categories: {
+            select: {
+              category: { select: { name: true } }
+            }
+          },
+          pornstars: {
+            select: {
+              pornstar: { select: { name: true, slug: true } }
+            }
+          },
+          tags: {
+            select: {
+              tag: { select: { name: true, slug: true } }
+            }
+          },
           createdBy: { select: { id: true, name: true, email: true } },
         },
+        cacheStrategy: { ttl: 60, swr: 60 },
       }),
-      prisma.video.count({ where }),
+      prisma.video.count({ where, cacheStrategy: { ttl: 60, swr: 60 } }),
     ])
 
     const normalizedVideos = videos.map((video) => ({
