@@ -1,7 +1,7 @@
 // Edge Runtime สำหรับ GET videos - เร็วกว่า Node.js runtime
 export const runtime = 'edge';
 
-import { prisma } from '@/lib/prisma';
+import { prismaEdge as prisma } from '@/lib/prisma-edge';
 import { verifyAuthEdge } from '@/lib/auth-edge';
 import { normalizeR2Url, toPublicPlaybackUrl } from '@/lib/r2-edge';
 import { videoQuerySchema } from '@/lib/validation';
