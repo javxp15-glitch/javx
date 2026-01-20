@@ -132,6 +132,8 @@ model Video {
   @@index([status])
   @@index([visibility])
   @@index([slug])
+  @@index([views(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
   @@map("videos")
 }
 
