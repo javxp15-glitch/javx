@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import VideoPlayer from "@/components/video-player"
+import { VideoPlayer } from "@/components/video-player"
 import { VideoInfo } from "@/components/video-info"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -16,7 +16,6 @@ interface VideoData {
   id: string
   title: string
   thumbnailUrl: string | null
-  videoUrl: string
 }
 
 interface VideoNavItem {
@@ -147,12 +146,7 @@ export default function VideoDetailPage({ params }: PageProps) {
                     Hide
                   </Button>
                 </div>
-                {video && (
-                  <VideoPlayer
-                    src={video.videoUrl}
-                    poster={video.thumbnailUrl || undefined}
-                  />
-                )}
+                <VideoPlayer videoId={id} />
               </div>
             ) : (
               // Thumbnail with Play Button Overlay
