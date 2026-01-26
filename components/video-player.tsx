@@ -17,7 +17,7 @@ export default function VideoPlayer({ src, poster, className }: VideoPlayerProps
 
   useEffect(() => {
     const loadVideo = async () => {
-      const video = (ref.current as any)?.plyr?.media as HTMLVideoElement
+      const video = document.getElementById("plyr") as HTMLVideoElement
       if (!video) return
 
       // Case 1: HLS Stream (.m3u8)
@@ -88,6 +88,7 @@ export default function VideoPlayer({ src, poster, className }: VideoPlayerProps
           id="plyr"
           className="plyr-react plyr"
           playsInline
+          controls
           poster={poster}
           data-poster={poster}
         />

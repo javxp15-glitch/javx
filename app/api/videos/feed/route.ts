@@ -178,9 +178,9 @@ export async function GET(req: Request) {
                     },
                     createdBy: { select: { id: true, name: true, email: true } },
                 },
-                cacheStrategy: { ttl: 60, swr: 60 },
+                cacheStrategy: { ttl: 600, swr: 600 },
             }),
-            prisma.video.count({ where, cacheStrategy: { ttl: 60, swr: 60 } }),
+            prisma.video.count({ where, cacheStrategy: { ttl: 600, swr: 600 } }),
         ]);
 
         const normalizedVideos = videos.map((video) => ({
