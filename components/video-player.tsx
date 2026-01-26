@@ -1,206 +1,113 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Card } from "@/components/ui/card"
-import { VideoControls } from "@/components/video-controls"
-import { useVideoControls } from "@/hooks/use-video-controls"
+import React, { useEffect, useRef } from "react"
+import Hls from "hls.js"
+import mpegts from "mpegts.js"
+import "plyr/dist/plyr.css"
+import Plyr, { APITypes } from "plyr-react"
 
 interface VideoPlayerProps {
-  videoId: string
+  src: string
+  poster?: string
+  className?: string
 }
 
-type VideoPayload = {
-  video?: {
-    videoUrl?: string | null
-    video_url?: string | null
-    status?: string | null
-  }
-}
-
-export function VideoPlayer({ videoId }: VideoPlayerProps) {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null)
-  const [status, setStatus] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const playerRef = useRef<any | null>(null)
-  const videoType = useMemo(() => {
-    if (!videoUrl) return "video/mp4"
-    const cleanUrl = videoUrl.split("?")[0].toLowerCase()
-    if (cleanUrl.endsWith(".webm")) return "video/webm"
-    if (cleanUrl.endsWith(".mov")) return "video/quicktime"
-    if (cleanUrl.endsWith(".avi")) return "video/x-msvideo"
-    if (cleanUrl.endsWith(".ts")) return "video/mp2t"
-    return "video/mp4"
-  }, [videoUrl])
-  const isTsVideo = useMemo(() => {
-    if (!videoUrl) return false
-    const cleanUrl = videoUrl.split("?")[0].toLowerCase()
-    return cleanUrl.endsWith(".ts")
-  }, [videoUrl])
-  const controls = useVideoControls({ videoRef, containerRef, sourceUrl: videoUrl })
+export default function VideoPlayer({ src, poster, className }: VideoPlayerProps) {
+  const ref = useRef<APITypes>(null)
 
   useEffect(() => {
-    let isMounted = true
-    const applyVideoPayload = (payload: VideoPayload) => {
-      const url = payload.video?.videoUrl ?? payload.video?.video_url ?? null
-      const nextStatus = payload.video?.status ?? null
-      if (!isMounted) return
-      setVideoUrl(url)
-      setStatus(nextStatus)
-    }
+    const loadVideo = async () => {
+      const video = document.getElementById("plyr") as HTMLVideoElement
+      if (!video) return
 
-    async function fetchVideo() {
-      setLoading(true)
-      setError(null)
-      setVideoUrl(null)
-      setStatus(null)
-      try {
-        const response = await fetch(`/api/videos/${videoId}`, { credentials: "include" })
-        if (response.ok) {
-          const data = (await response.json()) as VideoPayload
-          applyVideoPayload(data)
-          return
-        }
-
-        if (response.status === 401 || response.status === 403) {
-          const embedResponse = await fetch(`/api/embed/${videoId}`)
-          if (embedResponse.ok) {
-            const data = (await embedResponse.json()) as VideoPayload
-            applyVideoPayload(data)
-            return
-          }
-          const embedError = await embedResponse.json().catch(() => null)
-          if (isMounted) {
-            setError(embedError?.error || "Failed to load video")
-          }
-          return
-        }
-        const data = await response.json().catch(() => null)
-        if (isMounted) {
-          setError(data?.error || "Failed to load video")
-        }
-      } catch (error) {
-        console.error("Failed to fetch video:", error)
-        if (isMounted) {
-          setError("Failed to load video")
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
+      // Case 1: HLS Stream (.m3u8)
+      if (src.includes(".m3u8")) {
+        if (Hls.isSupported()) {
+          const hls = new Hls()
+          hls.loadSource(src)
+          hls.attachMedia(video)
+          // @ts-ignore
+          window.hls = hls
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          // Native HLS support (Safari)
+          video.src = src
         }
       }
-    }
-    fetchVideo()
-    return () => {
-      isMounted = false
-    }
-  }, [videoId])
-
-  useEffect(() => {
-    if (!videoUrl || !isTsVideo) {
-      if (playerRef.current) {
-        playerRef.current.destroy()
-        playerRef.current = null
+      // Case 2: TS Stream (.ts) via mpegts.js
+      else if (src.endsWith(".ts")) {
+        if (mpegts.isSupported()) {
+          const player = mpegts.createPlayer({
+            type: 'mpegts',
+            url: src,
+            isLive: false,
+            enableStashBuffer: false
+          })
+          player.attachMediaElement(video)
+          player.load()
+          // @ts-ignore
+          window.mpegtsPlayer = player
+        }
       }
-      return
-    }
-
-    let cancelled = false
-
-    async function setupTsPlayer() {
-      try {
-        const module = await import("mpegts.js")
-        const mpegts = module.default ?? module
-        if (!mpegts?.isSupported?.()) {
-          if (!cancelled) {
-            setError("TS playback is not supported in this browser")
-          }
-          return
-        }
-
-        const mediaElement = videoRef.current
-        if (!mediaElement || cancelled) return
-
-        const player = mpegts.createPlayer({ type: "mpegts", url: videoUrl })
-        playerRef.current = player
-        player.attachMediaElement(mediaElement)
-        player.load()
-      } catch (err) {
-        if (!cancelled) {
-          setError("Failed to load TS player")
-        }
+      // Case 3: MP4 or other direct files
+      else {
+        video.src = src
       }
     }
 
-    setupTsPlayer()
-
-    return () => {
-      cancelled = true
-      if (playerRef.current) {
-        playerRef.current.destroy()
-        playerRef.current = null
-      }
-    }
-  }, [isTsVideo, videoUrl])
-
-  if (loading) {
-    return (
-      <Card className="aspect-video bg-muted animate-pulse flex items-center justify-center">
-        <p className="text-muted-foreground">Loading video...</p>
-      </Card>
-    )
-  }
-
-  if (error) {
-    return (
-      <Card className="aspect-video bg-muted flex items-center justify-center">
-        <p className="text-muted-foreground">{error}</p>
-      </Card>
-    )
-  }
-
-  if (status && status !== "READY") {
-    return (
-      <Card className="aspect-video bg-muted flex items-center justify-center">
-        <p className="text-muted-foreground">Video is not available</p>
-      </Card>
-    )
-  }
-
-  if (!videoUrl) {
-    return (
-      <Card className="aspect-video bg-muted flex items-center justify-center">
-        <p className="text-muted-foreground">Video not available</p>
-      </Card>
-    )
-  }
+    loadVideo()
+  }, [src])
 
   return (
-    <Card className="overflow-hidden">
-      <div ref={containerRef} className="relative bg-black">
-        <video ref={videoRef} className="w-full aspect-video bg-black" playsInline preload="metadata">
-          {!isTsVideo && <source src={videoUrl} type={videoType} />}
-          Your browser does not support the video tag.
-        </video>
-        <VideoControls
-          isPlaying={controls.isPlaying}
-          isMuted={controls.isMuted}
-          currentTime={controls.currentTime}
-          duration={controls.duration}
-          playbackRate={controls.playbackRate}
-          onTogglePlay={controls.togglePlay}
-          onSeekBy={controls.seekBy}
-          onSeek={controls.seekTo}
-          onSeekStart={() => controls.setSeeking(true)}
-          onSeekEnd={() => controls.setSeeking(false)}
-          onToggleMute={controls.toggleMute}
-          onTogglePictureInPicture={controls.togglePictureInPicture}
-          onToggleFullscreen={controls.toggleFullscreen}
-          onSetPlaybackRate={controls.setPlaybackRate}
+    <div className={`w-full ${className}`}>
+      <Plyr
+        id="plyr"
+        ref={ref}
+        source={{} as any} // Source is handled manually via HLS/mpegts/video tag
+        options={{
+          ratio: '16:9', // Force 16:9 aspect ratio
+          controls: [
+            'play-large',
+            'play',
+            'progress',
+            'current-time',
+            'mute',
+            'volume',
+            'captions',
+            'settings',
+            'pip',
+            'airplay',
+            'fullscreen',
+          ],
+          settings: ['captions', 'quality', 'speed'],
+          speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+          quality: { default: 576, options: [4320, 2880, 2160, 1440, 1080, 720, 576, 480, 360, 240] },
+        }}
+        color="#DE2600" // Custom primary color
+      >
+        <video
+          id="plyr"
+          className="plyr-react plyr"
+          playsInline
+          controls
+          poster={poster}
+          data-poster={poster}
         />
-      </div>
-    </Card>
+      </Plyr>
+      <style jsx global>{`
+                :root {
+                    --plyr-color-main: #DE2600;
+                    --plyr-video-background: #000;
+                }
+                .plyr--full-ui input[type=range] {
+                    color: #DE2600;
+                }
+                .plyr__control--overlaid {
+                    background: rgba(222, 38, 0, 0.8);
+                }
+                .plyr__control--overlaid:hover {
+                    background: #DE2600;
+                }
+            `}</style>
+    </div>
   )
 }

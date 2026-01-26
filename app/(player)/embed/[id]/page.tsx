@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { extractDomain } from "@/lib/domain-security"
 import { normalizeR2Url } from "@/lib/r2"
+import VideoPlayer from "@/components/video-player"
 
 // Cache this page for 60 seconds
 export const revalidate = 60
@@ -104,21 +105,12 @@ export default async function EmbedPage({ params }: PageProps) {
 
   // 5. Render Raw HTML Video Player
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#000' }}>
-      <video
-        controls
-        autoPlay
-        playsInline
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain'
-        }}
-        title={video.title || "Video Player"}
-      >
-        <source src={normalizeR2Url(video.videoUrl) || video.videoUrl} type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
+    <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <VideoPlayer
+        src={normalizeR2Url(video.videoUrl) || video.videoUrl}
+        className="w-full h-full"
+        poster={video.thumbnailUrl || undefined}
+      />
     </div>
   )
 }
