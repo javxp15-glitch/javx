@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { FolderOpen, Globe, Shield, User, Tag } from "lucide-react"
+import { FolderOpen, Globe, Shield, User, Tag, FileSpreadsheet } from "lucide-react"
 
 export const metadata = {
     title: "การตั้งค่าแอดมิน - Media Storage",
@@ -71,6 +71,16 @@ export default function AdminPage() {
                         <div className="text-center">
                             <p className="font-medium text-white group-hover:text-blue-400 transition-colors">แท็ก</p>
                             <p className="text-xs text-muted-foreground">Tags</p>
+                        </div>
+                    </Link>
+                    <Link
+                        href="/admin/import"
+                        className="flex flex-col items-center gap-3 p-6 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 transition-colors group"
+                    >
+                        <FileSpreadsheet className="h-8 w-8 text-orange-400" />
+                        <div className="text-center">
+                            <p className="font-medium text-white group-hover:text-orange-400 transition-colors">นำเข้า</p>
+                            <p className="text-xs text-muted-foreground">Import</p>
                         </div>
                     </Link>
                 </div>

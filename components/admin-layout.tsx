@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { FolderOpen, Globe, User, Tag, Shield, ArrowLeft } from "lucide-react"
+import { FolderOpen, Globe, User, Tag, Shield, ArrowLeft, FileSpreadsheet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -38,6 +38,14 @@ const tabs = [
         color: "blue",
         title: "จัดการแท็ก",
         description: "จัดการแท็กสำหรับการจัดหมวดหมู่วิดีโอ",
+    },
+    {
+        name: "นำเข้า",
+        href: "/admin/import",
+        icon: FileSpreadsheet,
+        color: "orange",
+        title: "นำเข้าวิดีโอ",
+        description: "นำเข้าวิดีโอจากไฟล์ Excel พร้อมอัปโหลดไฟล์วิดีโอ",
     },
 ]
 
@@ -81,6 +89,16 @@ const colorClasses = {
         text: "text-blue-400",
         blur: "bg-blue-500/10",
         active: "border-b-blue-400 text-blue-400",
+    },
+    orange: {
+        bg: "bg-orange-500/10",
+        bgHover: "hover:bg-orange-500/20",
+        border: "border-orange-500/20",
+        gradient: "from-orange-500 to-orange-600",
+        shadow: "shadow-orange-500/20",
+        text: "text-orange-400",
+        blur: "bg-orange-500/10",
+        active: "border-b-orange-400 text-orange-400",
     },
 }
 
