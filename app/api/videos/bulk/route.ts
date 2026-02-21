@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         fileSize: validatedData.fileSize,
         mimeType: validatedData.mimeType,
         visibility: validatedData.visibility,
-        status: "PROCESSING",
+        status: "READY",
         createdById: user.userId,
         ...(categoryIds.length > 0 && {
           categories: {
