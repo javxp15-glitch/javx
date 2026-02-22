@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { FolderOpen, Globe, Shield, User, Tag, FileSpreadsheet } from "lucide-react"
+import { RetranscodeMovButton } from "@/components/retranscode-mov-button"
 
 export const metadata = {
     title: "การตั้งค่าแอดมิน - Media Storage",
@@ -83,6 +84,7 @@ export default function AdminPage() {
                             <p className="text-xs text-muted-foreground">Import</p>
                         </div>
                     </Link>
+                    <RetranscodeMovButton />
                 </div>
             </div>
         </div>
