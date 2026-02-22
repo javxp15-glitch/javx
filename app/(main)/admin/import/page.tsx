@@ -104,6 +104,24 @@ function uploadFileWithProgress(
   })
 }
 
+/** Get video duration in seconds from a File (same as normal upload). */
+function getVideoDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video")
+    video.preload = "metadata"
+    const url = URL.createObjectURL(file)
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url)
+      resolve(Math.round(video.duration))
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(null)
+    }
+    video.src = url
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /*  Steps                                                             */
 /* ------------------------------------------------------------------ */
@@ -247,6 +265,9 @@ export default function ImportPage() {
           ),
         )
 
+        // Get video duration (same as normal upload)
+        const duration = await getVideoDuration(file)
+
         // 3) Create video record
         const createRes = await fetch("/api/videos/bulk", {
           method: "POST",
@@ -260,6 +281,7 @@ export default function ImportPage() {
             visibility: row.resolvedVisibility,
             fileSize: file.size,
             mimeType: file.type || "video/mp4",
+            ...(duration != null && { duration }),
           }),
         })
 

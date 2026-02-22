@@ -16,6 +16,7 @@ const bulkCreateVideoSchema = z.object({
     .default("PUBLIC"),
   fileSize: z.number().optional(),
   mimeType: z.string().optional(),
+  duration: z.number().int().min(0).optional(),
 })
 
 async function resolveCategories(names: string[]): Promise<string[]> {
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
         videoUrl: validatedData.videoUrl,
         fileSize: validatedData.fileSize,
         mimeType: validatedData.mimeType,
+        ...(validatedData.duration != null && { duration: validatedData.duration }),
         visibility: validatedData.visibility,
         status: "READY",
         createdById: user.userId,
