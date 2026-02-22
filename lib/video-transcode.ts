@@ -12,9 +12,8 @@ const FFMPEG_PATH = process.env.FFMPEG_PATH || "ffmpeg"
 const shouldTranscodeToMp4 = (videoUrl: string, mimeType?: string | null) => {
     if (!videoUrl) return false
     if (mimeType?.toLowerCase() === "video/mp2t") return true
-    if (mimeType?.toLowerCase() === "video/quicktime") return true
     const cleanUrl = videoUrl.split("?")[0]?.toLowerCase() ?? ""
-    return cleanUrl.endsWith(".ts") || cleanUrl.endsWith(".mov")
+    return cleanUrl.endsWith(".ts")
 }
 
 const downloadToFile = async (url: string, targetPath: string) => {
@@ -91,7 +90,7 @@ const transcodeVideoToMp4 = async (videoId: string, videoUrl: string) => {
         await downloadToFile(signedUrl, inputPath)
         await runFfmpeg(inputPath, outputPath)
 
-        let targetKey = sourceKey.replace(/\.(ts|mov)$/i, ".mp4")
+        let targetKey = sourceKey.replace(/\.ts$/i, ".mp4")
         if (targetKey === sourceKey) {
             targetKey = generateUploadKey(`${videoId}.mp4`, "video")
         }
