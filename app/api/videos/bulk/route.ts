@@ -3,7 +3,7 @@ import { z } from "zod"
 import { getUserFromRequest } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { generateSlug, generateUniqueSlug } from "@/lib/utils"
-import { enqueueVideoTranscode } from "@/lib/video-transcode"
+import { enqueueThumbnailGenerate, enqueueVideoTranscode } from "@/lib/video-transcode"
 
 const bulkCreateVideoSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -130,6 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     enqueueVideoTranscode(video.id, video.videoUrl, video.mimeType)
+    enqueueThumbnailGenerate(video.id)
 
     return NextResponse.json(
       { message: "Video created successfully", video },

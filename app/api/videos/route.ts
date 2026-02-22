@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getUserFromRequest } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createVideoSchema } from "@/lib/validation"
-import { enqueueVideoTranscode } from "@/lib/video-transcode"
+import { enqueueThumbnailGenerate, enqueueVideoTranscode } from "@/lib/video-transcode"
 import { generateUniqueSlug } from "@/lib/utils"
 
 // POST - Create new video
@@ -93,6 +93,9 @@ export async function POST(request: NextRequest) {
     }
 
     enqueueVideoTranscode(video.id, video.videoUrl, video.mimeType)
+    if (!body.thumbnailUrl) {
+      enqueueThumbnailGenerate(video.id)
+    }
 
     return NextResponse.json(
       { message: "Video created successfully", video },
