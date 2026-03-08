@@ -1,0 +1,233 @@
+// Prisma Schema for Media Storage Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum Definitions
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum VideoVisibility {
+  PUBLIC
+  PRIVATE
+  DOMAIN_RESTRICTED
+}
+
+enum VideoStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+// User Model
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String   // Hashed password
+  role      UserRole @default(VIEWER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  videos    Video[]
+  apiTokens ApiToken[]
+
+  @@map("users")
+}
+
+// Category Model
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  videos VideoCategory[]
+
+  @@map("categories")
+}
+
+// Pornstar Model
+model Pornstar {
+  id          String    @id @default(cuid())
+  name        String
+  nameJp      String?   @map("name_jp") // ชื่อภาษาญี่ปุ่น
+  slug        String    @unique
+  avatar      String?   // URL รูป profile
+  height      Int?      // cm
+  cupSize     String?   @map("cup_size") // A, B, C, ...
+  bust        Int?      // cm
+  waist       Int?      // cm
+  hip         Int?      // cm
+  birthday    DateTime?
+  debutYear   Int?      @map("debut_year")
+  nationality String?
+  bio         String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  videos VideoPornstar[]
+
+  @@map("pornstars")
+}
+
+// Tag Model
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  usage     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  videos VideoTag[]
+
+  @@map("tags")
+}
+
+// Video Model
+model Video {
+  id           String          @id @default(cuid())
+  title        String
+  slug         String          @unique
+  description  String?
+  videoUrl     String          @map("video_url") // R2 URL
+  thumbnailUrl String?         @map("thumbnail_url") // R2 URL
+  previewUrl   String?         @map("preview_url") // Preview clip URL
+  duration     Int?            // in seconds
+  fileSize     Int?            @map("file_size") // in bytes
+  mimeType     String?         @map("mime_type")
+  visibility   VideoVisibility @default(PUBLIC)
+  status       VideoStatus     @default(PROCESSING)
+  views        Int             @default(0)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  // Foreign Keys
+  createdById String @map("created_by_id")
+
+  // Relations
+  createdBy      User                 @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  categories     VideoCategory[]
+  pornstars      VideoPornstar[]
+  tags           VideoTag[]
+  allowedDomains VideoAllowedDomain[]
+
+  @@index([createdById])
+  @@index([status])
+  @@index([visibility])
+  @@index([slug])
+  @@index([views(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@map("videos")
+}
+
+// Many-to-Many: Video <-> Category
+model VideoCategory {
+  videoId    String   @map("video_id")
+  categoryId String   @map("category_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  video    Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, categoryId])
+  @@index([videoId])
+  @@index([categoryId])
+  @@map("video_categories")
+}
+
+// Many-to-Many: Video <-> Pornstar
+model VideoPornstar {
+  videoId    String   @map("video_id")
+  pornstarId String   @map("pornstar_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  video    Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  pornstar Pornstar @relation(fields: [pornstarId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, pornstarId])
+  @@index([videoId])
+  @@index([pornstarId])
+  @@map("video_pornstars")
+}
+
+// Many-to-Many: Video <-> Tag
+model VideoTag {
+  videoId    String   @map("video_id")
+  tagId      String   @map("tag_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, tagId])
+  @@index([videoId])
+  @@index([tagId])
+  @@map("video_tags")
+}
+
+// Allowed Domains for Video Access
+model AllowedDomain {
+  id        String   @id @default(cuid())
+  domain    String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  videos VideoAllowedDomain[]
+
+  @@map("allowed_domains")
+}
+
+// Many-to-Many relation between Video and AllowedDomain
+model VideoAllowedDomain {
+  id       String @id @default(cuid())
+  videoId  String @map("video_id")
+  domainId String @map("domain_id")
+
+  video  Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  domain AllowedDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, domainId])
+  @@index([videoId])
+  @@index([domainId])
+  @@map("video_allowed_domains")
+}
+
+// API Tokens for admin access
+model ApiToken {
+  id         String    @id @default(cuid())
+  name       String
+  tokenHash  String    @unique @map("token_hash")
+  tokenLast4 String    @map("token_last4")
+  expiresAt  DateTime  @map("expires_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  createdById String @map("created_by_id")
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+  @@index([expiresAt])
+  @@map("api_tokens")
+}

@@ -1,0 +1,164 @@
+.javx-rt-wrap {
+  max-width: 1280px;
+}
+
+.javx-rt-intro {
+  max-width: 920px;
+  color: #4b5563;
+}
+
+.javx-rt-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.javx-rt-card {
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.javx-rt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.javx-rt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.javx-rt-field input[type="text"],
+.javx-rt-field input[type="number"],
+.javx-rt-field select {
+  width: 100%;
+}
+
+.javx-rt-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.javx-rt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.javx-rt-status-grid,
+.javx-rt-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.javx-rt-status-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.javx-rt-status-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.javx-rt-state-block {
+  padding: 12px;
+  margin-bottom: 18px;
+  border-left: 4px solid #0ea5e9;
+  background: #eff6ff;
+}
+
+.javx-rt-progress {
+  width: 100%;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.javx-rt-progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #f97316 0%, #fb7185 100%);
+  transition: width 0.25s ease;
+}
+
+.javx-rt-inline-stats,
+.javx-rt-modal-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.javx-rt-log-output {
+  min-height: 160px;
+  max-height: 260px;
+  overflow: auto;
+  margin-top: 14px;
+  padding: 12px;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+.javx-rt-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 100000;
+  padding: 24px;
+}
+
+.javx-rt-modal.is-open {
+  display: flex;
+}
+
+.javx-rt-modal-dialog {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.22);
+}
+
+.javx-rt-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+@media (max-width: 1080px) {
+  .javx-rt-layout,
+  .javx-rt-grid,
+  .javx-rt-status-grid,
+  .javx-rt-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
