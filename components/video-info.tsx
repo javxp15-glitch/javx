@@ -124,7 +124,7 @@ export function VideoInfo({ videoId }: VideoInfoProps) {
   }
 
   const copyEmbedCode = () => {
-    const embedCode = `<iframe src="${window.location.origin}/embed/${videoId}" width="100%" height="480" frameborder="0" allowfullscreen></iframe>`
+    const embedCode = `<iframe src="${window.location.origin}/embed/${videoId}" width="100%" height="480" frameborder="0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
     navigator.clipboard.writeText(embedCode)
     setCopied(true)
     toast.success("Embed code copied!")

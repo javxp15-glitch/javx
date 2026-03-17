@@ -25,6 +25,7 @@ export function EmbedCodeDialog({ videoId, videoTitle }: EmbedCodeDialogProps) {
   width="${width}"
   height="${height}"
   frameborder="0"
+  allow="autoplay; encrypted-media; fullscreen"
   allowfullscreen
   title="${videoTitle}">
 </iframe>`
@@ -80,7 +81,7 @@ export function EmbedCodeDialog({ videoId, videoTitle }: EmbedCodeDialogProps) {
           <div className="space-y-2">
             <Label>Preview</Label>
             <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-              <iframe src={embedUrl} width="100%" height="100%" frameBorder="0" allowFullScreen title={videoTitle} />
+              <iframe src={embedUrl} width="100%" height="100%" frameBorder="0" allow="autoplay; encrypted-media; fullscreen" allowFullScreen title={videoTitle} />
             </div>
           </div>
         </div>

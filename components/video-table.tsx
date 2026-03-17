@@ -353,7 +353,7 @@ export function VideoTable({ onEdit, onDelete, onBulkUpdate }: VideoTableProps) 
     }
 
     const copyEmbedCode = (videoId: string) => {
-        const embedCode = `<iframe src="${window.location.origin}/embed/${videoId}" width="100%" height="480" frameborder="0" allowfullscreen></iframe>`
+        const embedCode = `<iframe src="${window.location.origin}/embed/${videoId}" width="100%" height="480" frameborder="0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`
         navigator.clipboard.writeText(embedCode)
         toast.success("Copied embed code")
     }
