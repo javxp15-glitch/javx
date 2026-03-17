@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getRequestingDomain, isDomainAllowedForVideo } from "@/lib/domain-security"
-import { resolvePluginOrigin } from "@/lib/plugin-api"
+import { getSignedPlaybackUrl, normalizeR2Url } from "@/lib/r2"
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params
@@ -36,24 +36,23 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     console.log("[v0] Embed request - Video visibility:", video.visibility)
     console.log("[v0] Embed request - Requesting domain:", requestingDomain)
 
-    // Resolve app origin for proxy URLs
-    const appUrl = resolvePluginOrigin(request)
-
     // For PUBLIC videos, allow access from anywhere
     if (video.visibility === "PUBLIC") {
-      const proxyUrl = `${appUrl}/api/proxy/video/${video.id}.mp4`
+      // Use signed R2 URL for direct CDN playback (mobile compatible)
+      // URL is only returned via client-side fetch, never in SSR HTML
+      const signedUrl = await getSignedPlaybackUrl(video.videoUrl) ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl
 
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: proxyUrl, // Force Proxy URL
+          videoUrl: signedUrl,
           visibility: video.visibility,
           status: video.status,
         },
       }, {
         headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+          'Cache-Control': 'private, no-store'
         }
       })
     }
@@ -80,19 +79,19 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         return NextResponse.json({ error: "This video cannot be embedded on this domain" }, { status: 403 })
       }
 
-      // Domain is allowed - use proxy URL to hide direct storage URL
-      const proxyUrl = `${appUrl}/api/proxy/video/${video.id}.mp4`
+      // Domain is allowed - use signed R2 URL for direct CDN playback
+      const signedUrl = await getSignedPlaybackUrl(video.videoUrl) ?? normalizeR2Url(video.videoUrl) ?? video.videoUrl
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: proxyUrl,
+          videoUrl: signedUrl,
           visibility: video.visibility,
           status: video.status,
         },
       }, {
         headers: {
-          'Cache-Control': 'private, max-age=60'
+          'Cache-Control': 'private, no-store'
         }
       })
     }
