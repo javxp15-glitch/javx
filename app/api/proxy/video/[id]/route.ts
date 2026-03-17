@@ -2,7 +2,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getR2Client, getR2Config, buildR2ObjectKeyCandidates } from "@/lib/r2"
-import { GetObjectCommand, type GetObjectCommandInput, type GetObjectCommandOutput } from "@aws-sdk/client-s3"
+import { GetObjectCommand, HeadObjectCommand, type GetObjectCommandInput, type GetObjectCommandOutput } from "@aws-sdk/client-s3"
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
     const params = await props.params
@@ -71,10 +71,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
             // 4. Stream response back
             const headers = new Headers()
             if (response.ContentLength) headers.set("Content-Length", response.ContentLength.toString())
-            if (response.ContentType) headers.set("Content-Type", response.ContentType)
+            headers.set("Content-Type", response.ContentType || "video/mp4")
             if (response.ContentRange) headers.set("Content-Range", response.ContentRange)
             if (response.ETag) headers.set("ETag", response.ETag)
-            if (response.AcceptRanges) headers.set("Accept-Ranges", response.AcceptRanges)
+            // Always set Accept-Ranges — required for Safari/iOS video playback
+            headers.set("Accept-Ranges", response.AcceptRanges || "bytes")
             headers.set("X-Javx-Resolved-Key", resolvedKey)
 
             // Cache headers
@@ -84,9 +85,14 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
             // Use the integer status code from AWS or default to 200/206
             const status = response.$metadata.httpStatusCode || (range ? 206 : 200)
 
-            // Convert Node.js Readable stream into Web ReadableStream
-            // @ts-ignore - response.Body is a Node stream in aws-sdk v3 node environment
-            const stream = response.Body as unknown as ReadableStream
+            // Convert AWS SDK body to a Web ReadableStream for NextResponse
+            const body = response.Body
+            let stream: ReadableStream | null = null
+            if (body && typeof (body as any).transformToWebStream === "function") {
+                stream = (body as any).transformToWebStream()
+            } else {
+                stream = body as unknown as ReadableStream
+            }
 
             return new NextResponse(stream as any, {
                 status,
@@ -104,5 +110,55 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     } catch (error) {
         console.error("Proxy Error:", error)
         return new NextResponse("Internal Server Error", { status: 500 })
+    }
+}
+
+// HEAD — Safari/iOS sends HEAD before playing to check Accept-Ranges support
+export async function HEAD(_request: NextRequest, props: { params: Promise<{ id: string }> }) {
+    const params = await props.params
+    try {
+        const videoId = params.id.replace(/\.(mp4|webm|mov|avi|m4v)$/i, "")
+
+        const video = await prisma.video.findUnique({
+            where: { id: videoId },
+            select: { id: true, videoUrl: true },
+        })
+
+        if (!video || !video.videoUrl) {
+            return new NextResponse(null, { status: 404 })
+        }
+
+        const keys = buildR2ObjectKeyCandidates(video.videoUrl)
+        if (!keys.length) {
+            return new NextResponse(null, { status: 500 })
+        }
+
+        const config = getR2Config()
+        const client = getR2Client(config)
+
+        for (const key of keys) {
+            try {
+                const head = await client.send(new HeadObjectCommand({ Bucket: config.bucketName, Key: key }))
+
+                const headers = new Headers()
+                if (head.ContentLength) headers.set("Content-Length", head.ContentLength.toString())
+                headers.set("Content-Type", head.ContentType || "video/mp4")
+                headers.set("Accept-Ranges", "bytes")
+                if (head.ETag) headers.set("ETag", head.ETag)
+                headers.set("Cache-Control", "public, max-age=3600")
+                headers.set("Access-Control-Allow-Origin", "*")
+
+                return new NextResponse(null, { status: 200, headers })
+            } catch (s3Error: any) {
+                if (s3Error?.name !== "NotFound" && s3Error?.$metadata?.httpStatusCode !== 404) {
+                    throw s3Error
+                }
+            }
+        }
+
+        return new NextResponse(null, { status: 404 })
+    } catch (error) {
+        console.error("HEAD Proxy Error:", error)
+        return new NextResponse(null, { status: 500 })
     }
 }

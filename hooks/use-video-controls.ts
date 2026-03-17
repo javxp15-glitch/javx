@@ -180,9 +180,23 @@ export function useVideoControls({ videoRef, containerRef, sourceUrl }: UseVideo
                 await document.exitFullscreen()
             } else if (target.requestFullscreen) {
                 await target.requestFullscreen()
+            } else {
+                // iOS Safari fallback — only works on the <video> element itself
+                const video = videoRef.current as any
+                if (video?.webkitEnterFullscreen) {
+                    video.webkitEnterFullscreen()
+                }
             }
         } catch {
-            // Ignore fullscreen failures.
+            // Fallback for iOS Safari when standard fullscreen fails
+            try {
+                const video = videoRef.current as any
+                if (video?.webkitEnterFullscreen) {
+                    video.webkitEnterFullscreen()
+                }
+            } catch {
+                // Ignore fullscreen failures.
+            }
         }
     }, [containerRef, videoRef])
 
