@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { normalizeR2Url } from "@/lib/r2"
 import { getRequestingDomain, isDomainAllowedForVideo } from "@/lib/domain-security"
 import { resolvePluginOrigin } from "@/lib/plugin-api"
 
@@ -37,15 +36,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     console.log("[v0] Embed request - Video visibility:", video.visibility)
     console.log("[v0] Embed request - Requesting domain:", requestingDomain)
 
+    // Resolve app origin for proxy URLs
+    const appUrl = resolvePluginOrigin(request)
+
     // For PUBLIC videos, allow access from anywhere
     if (video.visibility === "PUBLIC") {
-      // Use public URL for better performance (no signed URL generation)
-      // BUT usage of Proxy to ensure mobile compatibility
-      // const resolvedVideoUrl = normalizeR2Url(video.videoUrl) ?? video.videoUrl
-
-      // AUTO-PROXY: Use local proxy to stream video
-      // This solves both CORS and ISP blocking issues on mobile
-      const appUrl = resolvePluginOrigin(request)
       const proxyUrl = `${appUrl}/api/proxy/video/${video.id}.mp4`
 
       return NextResponse.json({
@@ -85,13 +80,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         return NextResponse.json({ error: "This video cannot be embedded on this domain" }, { status: 403 })
       }
 
-      // Domain is allowed - use public URL for better performance
-      const resolvedVideoUrl = normalizeR2Url(video.videoUrl) ?? video.videoUrl
+      // Domain is allowed - use proxy URL to hide direct storage URL
+      const proxyUrl = `${appUrl}/api/proxy/video/${video.id}.mp4`
       return NextResponse.json({
         video: {
           id: video.id,
           title: video.title,
-          videoUrl: resolvedVideoUrl,
+          videoUrl: proxyUrl,
           visibility: video.visibility,
           status: video.status,
         },

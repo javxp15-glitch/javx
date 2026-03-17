@@ -1,7 +1,7 @@
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { extractDomain } from "@/lib/domain-security"
-import { resolveAppOriginFromHeaders } from "@/lib/app-origin"
+import EmbedPlayer from "./embed-player"
 
 // Cache this page for 60 seconds
 export const revalidate = 60
@@ -21,11 +21,6 @@ export default async function EmbedPage({ params }: PageProps) {
   // 1. Get request headers for domain check
   const headersList = await headers()
   const referer = headersList.get("referer")
-  const appOrigin = resolveAppOriginFromHeaders(
-    headersList,
-    "http://localhost:3000",
-    process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || process.env.SITE_URL || ""
-  )
 
   // 2. Fetch Video Data
   const video = await prisma.video.findUnique({
@@ -107,23 +102,6 @@ export default async function EmbedPage({ params }: PageProps) {
     data: { views: { increment: 1 } },
   }).catch(console.error)
 
-  // 5. Render Raw HTML Video Player
-  return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', background: '#000' }}>
-      <video
-        controls
-        autoPlay
-        playsInline
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain'
-        }}
-        title={video.title || "Video Player"}
-      >
-        <source src={`${appOrigin}/api/proxy/video/${video.id}.mp4`} type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
-    </div>
-  )
+  // 5. Render Client-Side Player (no video URL in SSR HTML)
+  return <EmbedPlayer videoId={video.id} title={video.title || "Video Player"} />
 }
