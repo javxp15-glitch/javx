@@ -110,7 +110,7 @@ model Video {
   thumbnailUrl String?         @map("thumbnail_url") // R2 URL
   previewUrl   String?         @map("preview_url") // Preview clip URL
   duration     Int?            // in seconds
-  fileSize     Int?            @map("file_size") // in bytes
+  fileSize     BigInt?         @map("file_size") // in bytes
   mimeType     String?         @map("mime_type")
   visibility   VideoVisibility @default(PUBLIC)
   status       VideoStatus     @default(PROCESSING)
