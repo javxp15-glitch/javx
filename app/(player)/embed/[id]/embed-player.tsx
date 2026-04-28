@@ -80,7 +80,6 @@ export default function EmbedPlayer({ videoId, title }: EmbedPlayerProps) {
       <video
         ref={videoRef}
         controls
-        autoPlay
         muted
         playsInline
         style={{
